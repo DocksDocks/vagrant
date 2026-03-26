@@ -89,6 +89,9 @@ EOF
     apt-get update -qq
     apt-get upgrade -y -qq
 
+    # ── Timezone ───────────────────────────────────────────
+    timedatectl set-timezone America/Sao_Paulo
+
     # ── Desktop XFCE ──────────────────────────────────────
     echo ">> Instalando XFCE desktop + utilitários..."
     apt-get install -y -qq \
