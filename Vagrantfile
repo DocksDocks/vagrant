@@ -132,7 +132,7 @@ APTCONF
       dbus-x11 xdg-utils xclip \
       pulseaudio xfce4-pulseaudio-plugin alsa-utils \
       fonts-noto-color-emoji \
-      gnome-themes-extra adwaita-icon-theme \
+      arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
       google-chrome-stable \
       docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
@@ -156,15 +156,31 @@ LIGHTDM
     usermod -aG autologin vagrant
     systemctl set-default graphical.target
 
-    # ── Dark mode (XFCE + GTK + terminal) ───────────────────
+    # LightDM greeter com Arc-Dark + Papirus (tela de login)
+    cat > /etc/lightdm/lightdm-gtk-greeter.conf <<'GREETER'
+[greeter]
+theme-name=Arc-Dark
+icon-theme-name=Papirus-Dark
+font-name=Noto Sans 10
+cursor-theme-name=DMZ-White
+cursor-theme-size=24
+background=#2b2b2b
+GREETER
+
+    # ── Tema visual (Arc-Dark + Papirus + Noto Sans) ────────
     mkdir -p /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml
 
     cat > /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'XSETTINGS'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xsettings" version="1.0">
   <property name="Net" type="empty">
-    <property name="ThemeName" type="string" value="Adwaita-dark"/>
-    <property name="IconThemeName" type="string" value="Adwaita"/>
+    <property name="ThemeName" type="string" value="Arc-Dark"/>
+    <property name="IconThemeName" type="string" value="Papirus-Dark"/>
+  </property>
+  <property name="Gtk" type="empty">
+    <property name="FontName" type="string" value="Noto Sans 10"/>
+    <property name="CursorThemeName" type="string" value="DMZ-White"/>
+    <property name="CursorThemeSize" type="int" value="24"/>
   </property>
 </channel>
 XSETTINGS
@@ -173,7 +189,8 @@ XSETTINGS
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfwm4" version="1.0">
   <property name="general" type="empty">
-    <property name="theme" type="string" value="Default-hdpi"/>
+    <property name="theme" type="string" value="Arc-Dark"/>
+    <property name="title_font" type="string" value="Noto Sans Bold 10"/>
   </property>
 </channel>
 XFWM4
@@ -182,9 +199,12 @@ XFWM4
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-terminal" version="1.0">
   <property name="misc-default-geometry" type="string" value="120x35"/>
-  <property name="color-background" type="string" value="#1e1e1e"/>
-  <property name="color-foreground" type="string" value="#d4d4d4"/>
+  <property name="font-name" type="string" value="Noto Sans Mono 11"/>
+  <property name="font-use-system" type="bool" value="false"/>
+  <property name="color-background" type="string" value="#2b2b2b"/>
+  <property name="color-foreground" type="string" value="#d3dae3"/>
   <property name="color-use-theme" type="bool" value="false"/>
+  <property name="scrolling-unlimited" type="bool" value="true"/>
 </channel>
 XFCETERM
 
