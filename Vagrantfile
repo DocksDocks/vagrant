@@ -1,8 +1,50 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+# ── Detecção automática de recursos do host ─────────────
+# RAM: 25% do host, mín 2 GB, máx 8 GB
+# CPUs: 50% do host, mín 1, máx 4
+require 'rbconfig'
+
+def detect_host_memory_mb
+  host_os = RbConfig::CONFIG['host_os']
+  if host_os =~ /darwin/i
+    `sysctl -n hw.memsize`.to_i / 1024 / 1024
+  elsif host_os =~ /linux/i
+    `grep MemTotal /proc/meminfo`.split[1].to_i / 1024
+  elsif host_os =~ /mswin|mingw|cygwin/i
+    `powershell -Command "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"`.strip.to_i / 1024 / 1024
+  else
+    8192 # fallback: assume 8 GB
+  end
+end
+
+def detect_host_cpus
+  host_os = RbConfig::CONFIG['host_os']
+  if host_os =~ /darwin/i
+    `sysctl -n hw.ncpu`.to_i
+  elsif host_os =~ /linux/i
+    `nproc`.to_i
+  elsif host_os =~ /mswin|mingw|cygwin/i
+    ENV['NUMBER_OF_PROCESSORS'].to_i
+  else
+    2 # fallback
+  end
+end
+
+host_ram  = detect_host_memory_mb
+host_cpus = detect_host_cpus
+
+vm_memory = [[host_ram / 4, 2048].max, 8192].min  # 25% do host, entre 2 GB e 8 GB
+vm_cpus   = [[host_cpus / 2, 1].max, 4].min       # 50% do host, entre 1 e 4
+
+# ════════════════════════════════════════════════════════
+# Host detectado: #{host_ram} MB RAM, #{host_cpus} CPUs
+# VM alocada:     #{vm_memory} MB RAM, #{vm_cpus} CPUs
+# ════════════════════════════════════════════════════════
+
 Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu/noble64"
+  config.vm.box = "bento/ubuntu-24.04"
   config.vm.hostname = "dev-box"
 
   # ── Rede ──────────────────────────────────────────────
@@ -11,11 +53,16 @@ Vagrant.configure("2") do |config|
   # config.vm.network "forwarded_port", guest: 3000, host: 3000
   # config.vm.network "forwarded_port", guest: 8080, host: 8080
 
-  # ── Recursos da VM ────────────────────────────────────
+  # ── Recursos da VM (alocação dinâmica) ───────────────
   config.vm.provider "virtualbox" do |vb|
     vb.name   = "ubuntu24-dev"
-    vb.memory = "4096"
-    vb.cpus   = 2
+    vb.gui    = true
+    vb.memory = vm_memory
+    vb.cpus   = vm_cpus
+    vb.customize ["modifyvm", :id, "--vram", "128"]
+    vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
+    vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
+    vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
   end
 
   # ── Provisionamento ──────────────────────────────────
@@ -23,11 +70,55 @@ Vagrant.configure("2") do |config|
     set -euo pipefail
     export DEBIAN_FRONTEND=noninteractive
 
+    # Evita prompts interativos do dpkg em arquivos de configuração
+    cat > /etc/apt/apt.conf.d/99force-conf <<EOF
+Dpkg::Options {
+  "--force-confdef";
+  "--force-confold";
+}
+EOF
+
     echo "══════════════════════════════════════════"
     echo "  Atualizando sistema base"
     echo "══════════════════════════════════════════"
     apt-get update -qq
     apt-get upgrade -y -qq
+
+    # ── Desktop XFCE ──────────────────────────────────────
+    echo ">> Instalando XFCE desktop + utilitários..."
+    apt-get install -y -qq \
+      xfce4 xfce4-goodies xfce4-terminal \
+      lightdm lightdm-gtk-greeter \
+      dbus-x11 xdg-utils xclip \
+      fonts-noto-color-emoji
+
+    # Google Chrome
+    echo ">> Instalando google chrome..."
+    curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | \
+      gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] \
+      https://dl.google.com/linux/chrome/deb/ stable main" \
+      > /etc/apt/sources.list.d/google-chrome.list
+    apt-get update -qq
+    apt-get install -y -qq google-chrome-stable
+
+    # Configura o LightDM como display manager padrão e habilita autologin
+    mkdir -p /etc/lightdm/lightdm.conf.d
+    cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<EOF
+[Seat:*]
+autologin-user=vagrant
+autologin-user-timeout=0
+user-session=xfce
+EOF
+
+    # Adiciona vagrant ao grupo autologin (necessário no LightDM)
+    groupadd -f autologin
+    usermod -aG autologin vagrant
+
+    systemctl set-default graphical.target
+
+    # Guest Additions para clipboard bidirecional e resize de tela
+    apt-get install -y -qq virtualbox-guest-utils virtualbox-guest-x11
 
     # ── Git ─────────────────────────────────────────────
     echo ">> Instalando git..."
