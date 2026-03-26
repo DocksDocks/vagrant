@@ -95,7 +95,7 @@ EOF
     # Google Chrome
     echo ">> Instalando google chrome..."
     curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | \
-      gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg
+      gpg --batch --yes --dearmor -o /etc/apt/keyrings/google-chrome.gpg
     echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] \
       https://dl.google.com/linux/chrome/deb/ stable main" \
       > /etc/apt/sources.list.d/google-chrome.list
@@ -116,6 +116,40 @@ EOF
     usermod -aG autologin vagrant
 
     systemctl set-default graphical.target
+
+    # Chrome como navegador padrão + atalho na taskbar do XFCE
+    # (escrevemos como root nos paths do vagrant e corrigimos owner no final)
+
+    # 1) XFCE helper para Chrome
+    mkdir -p /home/vagrant/.config/xfce4/helpers
+    cat > /home/vagrant/.config/xfce4/helpers/google-chrome.desktop <<'CHROMEHELPER'
+[Desktop Entry]
+X-XFCE-Binaries=google-chrome-stable;google-chrome;
+X-XFCE-Category=WebBrowser
+X-XFCE-Commands=%B;%B;
+X-XFCE-CommandsWithParameter=%B "%s";%B "%s";
+Type=X-XFCE-Helper
+Name=Google Chrome
+Icon=google-chrome
+CHROMEHELPER
+
+    # 2) helpers.rc — diz ao exo para usar Chrome
+    echo "WebBrowser=google-chrome" > /home/vagrant/.config/xfce4/helpers.rc
+
+    # 3) mimeapps.list — Chrome como handler HTTP/HTTPS/HTML
+    mkdir -p /home/vagrant/.config
+    cat > /home/vagrant/.config/mimeapps.list <<'MIMEAPPS'
+[Default Applications]
+x-scheme-handler/http=google-chrome.desktop
+x-scheme-handler/https=google-chrome.desktop
+text/html=google-chrome.desktop
+MIMEAPPS
+
+    # 4) Substitui o ícone genérico 'Web Browser' pelo Chrome no painel
+    cp /usr/share/applications/google-chrome.desktop /usr/share/applications/exo-web-browser.desktop 2>/dev/null || true
+
+    # 5) Corrige owner de tudo que criamos
+    chown -R vagrant:vagrant /home/vagrant/.config
 
     # Guest Additions para clipboard bidirecional e resize de tela
     apt-get install -y -qq virtualbox-guest-utils virtualbox-guest-x11
@@ -146,7 +180,7 @@ EOF
 
     install -m 0755 -d /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-      gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
 
     echo \
@@ -176,12 +210,9 @@ EOF
 
     # ── SSH Key + alias + ~/projects ──────────────────────
     echo ">> Configurando SSH key, alias e diretório de projetos..."
-    su - vagrant -c 'bash -c "\
-      mkdir -p ~/projects && \
-      ssh-keygen -t ed25519 -C \"vagrant@dev-box\" -f ~/.ssh/id_ed25519 -N \"\" && \
-      grep -qxF \"alias pf=\\\"cd ~/projects\\\"\" ~/.bashrc || \
-        echo \"alias pf=\\\"cd ~/projects\\\"\" >> ~/.bashrc \
-    "'
+    su - vagrant -c 'mkdir -p ~/projects'
+    su - vagrant -c 'test -f ~/.ssh/id_ed25519 || ssh-keygen -t ed25519 -C "vagrant@dev-box" -f ~/.ssh/id_ed25519 -N ""'
+    su - vagrant -c 'grep -qxF "alias pf=\"cd ~/projects\"" ~/.bashrc || echo "alias pf=\"cd ~/projects\"" >> ~/.bashrc'
 
     # ── Resumo ──────────────────────────────────────────
     echo ""
