@@ -63,6 +63,11 @@ Vagrant.configure("2") do |config|
     vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
     vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
     vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
+    vb.customize ["modifyvm", :id, "--audio-driver", "dsound"]
+    vb.customize ["modifyvm", :id, "--audio-controller", "hda"]
+    vb.customize ["modifyvm", :id, "--audio-enabled", "on"]
+    vb.customize ["modifyvm", :id, "--audio-out", "on"]
+    vb.customize ["modifyvm", :id, "--audio-in", "off"]
   end
 
   # ── Provisionamento ──────────────────────────────────
@@ -90,6 +95,7 @@ EOF
       xfce4 xfce4-goodies xfce4-terminal \
       lightdm lightdm-gtk-greeter \
       dbus-x11 xdg-utils xclip \
+      pulseaudio xfce4-pulseaudio-plugin alsa-utils \
       fonts-noto-color-emoji
 
     # Google Chrome
