@@ -1,6 +1,6 @@
-# Ubuntu 24.04 Dev Box
+# Debian 12 Dev Box
 
-Ambiente de desenvolvimento completo rodando em uma VM Ubuntu 24.04 (Noble Numbat), provisionado automaticamente pelo Vagrant.
+Ambiente de desenvolvimento completo rodando em uma VM Debian 12 (Bookworm), provisionado automaticamente pelo Vagrant. Debian é mais leve que Ubuntu (~180 MB RAM base vs ~400 MB), usa `apt` igualmente, e mantém compatibilidade total com todas as ferramentas.
 
 ## Pré-requisitos
 
@@ -18,7 +18,9 @@ Instale os dois programas abaixo **antes** de começar:
 
 | Ferramenta       | Detalhes                                                        |
 |------------------|-----------------------------------------------------------------|
-| **Git**          | Direto do repositório do Ubuntu                                 |
+| **XFCE 4**       | Desktop leve com LightDM e autologin                            |
+| **Google Chrome** | Navegador pré-instalado (repo oficial Google)                   |
+| **Git**          | Direto do repositório do Debian                                 |
 | **Python 3**     | Com `pip` e `venv`                                              |
 | **PHP**          | CLI + extensões comuns (curl, mbstring, xml, zip, bcmath, intl) |
 | **Composer**     | Gerenciador de dependências PHP                                 |
@@ -29,22 +31,39 @@ Instale os dois programas abaixo **antes** de começar:
 | **Claude Code**  | CLI nativa da Anthropic                                         |
 | **ShellCheck**   | Linter para shell scripts                                       |
 
-## Recursos da VM
+## Recursos da VM (alocação dinâmica)
 
-| Recurso | Valor padrão |
-|---------|-------------|
-| RAM     | 4 GB        |
-| CPUs    | 2           |
-| OS      | Ubuntu 24.04 LTS (Noble Numbat) |
+O Vagrantfile detecta automaticamente a RAM e os CPUs do host e aloca proporcionalmente:
 
-Você pode ajustar RAM e CPUs editando `vb.memory` e `vb.cpus` no `Vagrantfile`.
+| Recurso | Regra                         | Mínimo | Máximo |
+|---------|-------------------------------|--------|--------|
+| RAM     | 25% do host                   | 2 GB   | 8 GB   |
+| CPUs    | 50% do host                   | 1      | 4      |
+| VRAM    | Fixo                          | 128 MB | 128 MB |
+| Desktop | XFCE 4 (via LightDM com autologin) | —  | —      |
+
+Exemplos de como fica na prática:
+
+| Host         | VM recebe         |
+|--------------|-------------------|
+| 8 GB / 4 cores  | 2 GB RAM / 2 CPUs |
+| 16 GB / 8 cores | 4 GB RAM / 4 CPUs |
+| 32 GB / 12 cores | 8 GB RAM / 4 CPUs |
+| 64 GB / 16 cores | 8 GB RAM / 4 CPUs |
+
+Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando `vm_memory` e `vm_cpus` diretamente no topo do `Vagrantfile`.
 
 ## Extras configurados automaticamente
 
+- **Desktop XFCE** com autologin — ao rodar `vagrant up`, a janela do VirtualBox abre direto no desktop sem pedir senha.
+- **Clipboard bidirecional** e **drag-and-drop** entre host e VM.
+- **Google Chrome** pré-instalado para navegação dentro da VM.
 - **Chave SSH ED25519** gerada em `~/.ssh/id_ed25519` — a chave pública é exibida no terminal ao final do provisionamento para você copiar direto pro GitHub/GitLab.
 - **`~/projects`** — diretório para seus projetos, já criado.
 - **Alias `pf`** — digitar `pf` no terminal leva direto para `~/projects`.
 - **Docker sem sudo** — o usuário `vagrant` já está no grupo `docker`.
+- **Áudio habilitado** — saída de som via Intel HD Audio (sem microfone).
+- **Timezone** configurado para `America/Sao_Paulo` (UTC-3).
 
 ## Comandos principais
 
@@ -54,7 +73,7 @@ Você pode ajustar RAM e CPUs editando `vb.memory` e `vb.cpus` no `Vagrantfile`.
 vagrant up
 ```
 
-Na primeira execução, o Vagrant baixa a imagem do Ubuntu 24.04, cria a VM no VirtualBox e roda todo o provisionamento (instalação dos pacotes). Isso leva alguns minutos dependendo da sua conexão.
+Na primeira execução, o Vagrant baixa a imagem do Debian 12, cria a VM no VirtualBox e roda todo o provisionamento (instalação dos pacotes e desktop XFCE). Isso leva alguns minutos dependendo da sua conexão. A janela do VirtualBox abre automaticamente com o desktop XFCE e autologin como `vagrant`.
 
 ### Acessar a VM via SSH
 
