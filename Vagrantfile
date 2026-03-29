@@ -218,7 +218,8 @@ XFWM4
 XFCETERM
 
     # ── Painel XFCE (layout Ubuntu-like: top bar + bottom dock) ──
-    # Escrito em /etc/xdg para ser usado como default na migração do primeiro login
+    # Escrito em /etc/xdg para ser usado como default no primeiro login
+    mkdir -p /etc/xdg/xfce4/xfconf/xfce-perchannel-xml
     mkdir -p /etc/xdg/xfce4/panel/launcher-9
     mkdir -p /etc/xdg/xfce4/panel/launcher-10
     mkdir -p /etc/xdg/xfce4/panel/launcher-11
@@ -333,6 +334,10 @@ XFCETERM
   </property>
 </channel>
 XFCEPANEL
+
+    # Copia para xfconf xdg path (onde xfconfd lê no primeiro login)
+    cp /etc/xdg/xfce4/panel/default.xml \
+       /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
 
     # ── Launchers do dock (em /etc/xdg para o default.xml) ──
     cat > /etc/xdg/xfce4/panel/launcher-9/terminal.desktop <<'LAUNCH1'
