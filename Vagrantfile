@@ -218,24 +218,26 @@ XFWM4
 XFCETERM
 
     # ── Painel XFCE (layout Ubuntu-like: top bar + bottom dock) ──
-    cat > /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<'XFCEPANEL'
+    # Escrito em /etc/xdg para ser usado como default na migração do primeiro login
+    mkdir -p /etc/xdg/xfce4/panel/launcher-9
+    mkdir -p /etc/xdg/xfce4/panel/launcher-10
+    mkdir -p /etc/xdg/xfce4/panel/launcher-11
+    mkdir -p /etc/xdg/xfce4/panel/launcher-12
+
+    cat > /etc/xdg/xfce4/panel/default.xml <<'XFCEPANEL'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-panel" version="1.0">
   <property name="configver" type="int" value="2"/>
   <property name="panels" type="array">
     <value type="int" value="1"/>
     <value type="int" value="2"/>
-  </property>
-
-  <!-- Panel 1: Top bar (GNOME-style) -->
-  <property name="panels" type="empty">
     <property name="panel-1" type="empty">
       <property name="position" type="string" value="p=6;x=0;y=0"/>
       <property name="position-locked" type="bool" value="true"/>
       <property name="size" type="uint" value="28"/>
       <property name="length" type="uint" value="100"/>
       <property name="length-adjust" type="bool" value="false"/>
-      <property name="background-style" type="uint" value="0"/>
+      <property name="icon-size" type="uint" value="16"/>
       <property name="plugin-ids" type="array">
         <value type="int" value="1"/>
         <value type="int" value="2"/>
@@ -247,15 +249,13 @@ XFCETERM
         <value type="int" value="8"/>
       </property>
     </property>
-
-    <!-- Panel 2: Bottom dock (Ubuntu dash-style) -->
     <property name="panel-2" type="empty">
       <property name="position" type="string" value="p=12;x=0;y=0"/>
       <property name="position-locked" type="bool" value="true"/>
       <property name="size" type="uint" value="48"/>
-      <property name="length" type="uint" value="0"/>
+      <property name="length" type="uint" value="1"/>
       <property name="length-adjust" type="bool" value="true"/>
-      <property name="background-style" type="uint" value="0"/>
+      <property name="icon-size" type="uint" value="32"/>
       <property name="plugin-ids" type="array">
         <value type="int" value="9"/>
         <value type="int" value="10"/>
@@ -267,7 +267,6 @@ XFCETERM
     </property>
   </property>
 
-  <!-- Plugin definitions -->
   <property name="plugins" type="empty">
     <property name="plugin-1" type="string" value="whiskermenu"/>
 
@@ -335,10 +334,8 @@ XFCETERM
 </channel>
 XFCEPANEL
 
-    # ── Launchers do dock (terminal, file manager, chrome, mousepad) ──
-    mkdir -p /home/vagrant/.config/xfce4/panel/launcher-{9,10,11,12}
-
-    cat > /home/vagrant/.config/xfce4/panel/launcher-9/terminal.desktop <<'LAUNCH1'
+    # ── Launchers do dock (em /etc/xdg para o default.xml) ──
+    cat > /etc/xdg/xfce4/panel/launcher-9/terminal.desktop <<'LAUNCH1'
 [Desktop Entry]
 Type=Application
 Name=Terminal
@@ -347,7 +344,7 @@ Exec=xfce4-terminal
 StartupNotify=true
 LAUNCH1
 
-    cat > /home/vagrant/.config/xfce4/panel/launcher-10/filemanager.desktop <<'LAUNCH2'
+    cat > /etc/xdg/xfce4/panel/launcher-10/filemanager.desktop <<'LAUNCH2'
 [Desktop Entry]
 Type=Application
 Name=File Manager
@@ -356,7 +353,7 @@ Exec=thunar
 StartupNotify=true
 LAUNCH2
 
-    cat > /home/vagrant/.config/xfce4/panel/launcher-11/chrome.desktop <<'LAUNCH3'
+    cat > /etc/xdg/xfce4/panel/launcher-11/chrome.desktop <<'LAUNCH3'
 [Desktop Entry]
 Type=Application
 Name=Google Chrome
@@ -365,7 +362,7 @@ Exec=google-chrome-stable
 StartupNotify=true
 LAUNCH3
 
-    cat > /home/vagrant/.config/xfce4/panel/launcher-12/mousepad.desktop <<'LAUNCH4'
+    cat > /etc/xdg/xfce4/panel/launcher-12/mousepad.desktop <<'LAUNCH4'
 [Desktop Entry]
 Type=Application
 Name=Mousepad
