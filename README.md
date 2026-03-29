@@ -67,6 +67,8 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 ## Extras configurados automaticamente
 
 - **Desktop XFCE** com autologin — ao rodar `vagrant up`, a janela do VirtualBox abre direto no desktop sem pedir senha.
+- **Layout Ubuntu-like** — barra superior (whiskermenu, relógio centralizado, systray) + dock inferior centralizado (ícones de apps fixos + janelas abertas sem labels).
+- **Dock com apps fixos** — Terminal, Thunar, Chrome e Mousepad prontos para uso com um clique.
 - **Tema Arc-Dark** + ícones **Papirus-Dark** + fonte **Noto Sans** + cursor **DMZ-White** — visual moderno e limpo em dark mode.
 - **Clipboard bidirecional** e **drag-and-drop** entre host e VM.
 - **Google Chrome** pré-instalado para navegação dentro da VM.

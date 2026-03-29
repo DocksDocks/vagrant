@@ -199,6 +199,163 @@ XFWM4
 </channel>
 XFCETERM
 
+    # ── Painel XFCE (layout Ubuntu-like: top bar + bottom dock) ──
+    cat > /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<'XFCEPANEL'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-panel" version="1.0">
+  <property name="configver" type="int" value="2"/>
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <value type="int" value="2"/>
+  </property>
+
+  <!-- Panel 1: Top bar (GNOME-style) -->
+  <property name="panels" type="empty">
+    <property name="panel-1" type="empty">
+      <property name="position" type="string" value="p=6;x=0;y=0"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="size" type="uint" value="28"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="length-adjust" type="bool" value="false"/>
+      <property name="background-style" type="uint" value="0"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="1"/>
+        <value type="int" value="2"/>
+        <value type="int" value="3"/>
+        <value type="int" value="4"/>
+        <value type="int" value="5"/>
+        <value type="int" value="6"/>
+        <value type="int" value="7"/>
+        <value type="int" value="8"/>
+      </property>
+    </property>
+
+    <!-- Panel 2: Bottom dock (Ubuntu dash-style) -->
+    <property name="panel-2" type="empty">
+      <property name="position" type="string" value="p=12;x=0;y=0"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="size" type="uint" value="48"/>
+      <property name="length" type="uint" value="0"/>
+      <property name="length-adjust" type="bool" value="true"/>
+      <property name="background-style" type="uint" value="0"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="9"/>
+        <value type="int" value="10"/>
+        <value type="int" value="11"/>
+        <value type="int" value="12"/>
+        <value type="int" value="13"/>
+        <value type="int" value="14"/>
+      </property>
+    </property>
+  </property>
+
+  <!-- Plugin definitions -->
+  <property name="plugins" type="empty">
+    <property name="plugin-1" type="string" value="whiskermenu"/>
+
+    <property name="plugin-2" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+
+    <property name="plugin-3" type="string" value="clock">
+      <property name="digital-format" type="string" value="%a %d %b  %H:%M"/>
+      <property name="mode" type="uint" value="2"/>
+    </property>
+
+    <property name="plugin-4" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+
+    <property name="plugin-5" type="string" value="clipman"/>
+
+    <property name="plugin-6" type="string" value="systray">
+      <property name="square-icons" type="bool" value="true"/>
+    </property>
+
+    <property name="plugin-7" type="string" value="notification-plugin"/>
+
+    <property name="plugin-8" type="string" value="power-manager-plugin"/>
+
+    <property name="plugin-9" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="terminal.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-10" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="filemanager.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-11" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="chrome.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-12" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="mousepad.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-13" type="string" value="separator">
+      <property name="expand" type="bool" value="false"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+
+    <property name="plugin-14" type="string" value="tasklist">
+      <property name="show-labels" type="bool" value="false"/>
+      <property name="flat-buttons" type="bool" value="true"/>
+      <property name="grouping" type="uint" value="1"/>
+      <property name="show-handle" type="bool" value="false"/>
+    </property>
+  </property>
+</channel>
+XFCEPANEL
+
+    # ── Launchers do dock (terminal, file manager, chrome, mousepad) ──
+    mkdir -p /home/vagrant/.config/xfce4/panel/launcher-{9,10,11,12}
+
+    cat > /home/vagrant/.config/xfce4/panel/launcher-9/terminal.desktop <<'LAUNCH1'
+[Desktop Entry]
+Type=Application
+Name=Terminal
+Icon=org.xfce.terminal
+Exec=xfce4-terminal
+StartupNotify=true
+LAUNCH1
+
+    cat > /home/vagrant/.config/xfce4/panel/launcher-10/filemanager.desktop <<'LAUNCH2'
+[Desktop Entry]
+Type=Application
+Name=File Manager
+Icon=org.xfce.thunar
+Exec=thunar
+StartupNotify=true
+LAUNCH2
+
+    cat > /home/vagrant/.config/xfce4/panel/launcher-11/chrome.desktop <<'LAUNCH3'
+[Desktop Entry]
+Type=Application
+Name=Google Chrome
+Icon=google-chrome
+Exec=google-chrome-stable
+StartupNotify=true
+LAUNCH3
+
+    cat > /home/vagrant/.config/xfce4/panel/launcher-12/mousepad.desktop <<'LAUNCH4'
+[Desktop Entry]
+Type=Application
+Name=Mousepad
+Icon=org.xfce.mousepad
+Exec=mousepad
+StartupNotify=true
+LAUNCH4
+
     # ── Chrome como navegador padrão ────────────────────────
     mkdir -p /home/vagrant/.config/xfce4/helpers
     cat > /home/vagrant/.config/xfce4/helpers/google-chrome.desktop <<'CHROMEHELPER'
