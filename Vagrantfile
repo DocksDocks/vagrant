@@ -220,10 +220,6 @@ XFCETERM
     # ── Painel XFCE (layout Ubuntu-like: top bar + bottom dock) ──
     # Escrito em /etc/xdg para ser usado como default no primeiro login
     mkdir -p /etc/xdg/xfce4/xfconf/xfce-perchannel-xml
-    mkdir -p /etc/xdg/xfce4/panel/launcher-9
-    mkdir -p /etc/xdg/xfce4/panel/launcher-10
-    mkdir -p /etc/xdg/xfce4/panel/launcher-11
-    mkdir -p /etc/xdg/xfce4/panel/launcher-12
 
     cat > /etc/xdg/xfce4/panel/default.xml <<'XFCEPANEL'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -251,7 +247,7 @@ XFCETERM
       </property>
     </property>
     <property name="panel-2" type="empty">
-      <property name="position" type="string" value="p=12;x=0;y=0"/>
+      <property name="position" type="string" value="p=12;x=50;y=0"/>
       <property name="position-locked" type="bool" value="true"/>
       <property name="size" type="uint" value="48"/>
       <property name="length" type="uint" value="1"/>
@@ -298,19 +294,19 @@ XFCETERM
 
     <property name="plugin-9" type="string" value="launcher">
       <property name="items" type="array">
-        <value type="string" value="terminal.desktop"/>
+        <value type="string" value="xfce4-terminal.desktop"/>
       </property>
     </property>
 
     <property name="plugin-10" type="string" value="launcher">
       <property name="items" type="array">
-        <value type="string" value="filemanager.desktop"/>
+        <value type="string" value="thunar.desktop"/>
       </property>
     </property>
 
     <property name="plugin-11" type="string" value="launcher">
       <property name="items" type="array">
-        <value type="string" value="chrome.desktop"/>
+        <value type="string" value="google-chrome.desktop"/>
       </property>
     </property>
 
@@ -338,43 +334,6 @@ XFCEPANEL
     # Copia para xfconf xdg path (onde xfconfd lê no primeiro login)
     cp /etc/xdg/xfce4/panel/default.xml \
        /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
-
-    # ── Launchers do dock (em /etc/xdg para o default.xml) ──
-    cat > /etc/xdg/xfce4/panel/launcher-9/terminal.desktop <<'LAUNCH1'
-[Desktop Entry]
-Type=Application
-Name=Terminal
-Icon=org.xfce.terminal
-Exec=xfce4-terminal
-StartupNotify=true
-LAUNCH1
-
-    cat > /etc/xdg/xfce4/panel/launcher-10/filemanager.desktop <<'LAUNCH2'
-[Desktop Entry]
-Type=Application
-Name=File Manager
-Icon=org.xfce.thunar
-Exec=thunar
-StartupNotify=true
-LAUNCH2
-
-    cat > /etc/xdg/xfce4/panel/launcher-11/chrome.desktop <<'LAUNCH3'
-[Desktop Entry]
-Type=Application
-Name=Google Chrome
-Icon=google-chrome
-Exec=google-chrome-stable
-StartupNotify=true
-LAUNCH3
-
-    cat > /etc/xdg/xfce4/panel/launcher-12/mousepad.desktop <<'LAUNCH4'
-[Desktop Entry]
-Type=Application
-Name=Mousepad
-Icon=org.xfce.mousepad
-Exec=mousepad
-StartupNotify=true
-LAUNCH4
 
     # ── Chrome como navegador padrão ────────────────────────
     mkdir -p /home/vagrant/.config/xfce4/helpers
