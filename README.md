@@ -78,6 +78,7 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 - **Aliases** — `pf` (~/projects), `fd` (fdfind), `bat` (batcat).
 - **Docker sem sudo** — o usuário `vagrant` já está no grupo `docker`.
 - **direnv** — hook ativado no `.bashrc` para carregar `.envrc` automaticamente.
+- **Áudio habilitado** — saída de som via Intel HD Audio (sem microfone).
 - **Git config** — `init.defaultBranch` definido como `main`. Lembre-se de configurar `user.name` e `user.email`.
 - **Timezone** configurado para `America/Sao_Paulo` (UTC-3).
 

@@ -32,6 +32,18 @@ def detect_host_cpus
   end
 end
 
+def detect_audio_driver
+  if HOST_OS =~ /mswin|mingw|cygwin/i
+    "dsound"
+  elsif HOST_OS =~ /darwin/i
+    "coreaudio"
+  elsif HOST_OS =~ /linux/i
+    "pulse"
+  else
+    "none"
+  end
+end
+
 host_ram  = detect_host_memory_mb
 host_cpus = detect_host_cpus
 
@@ -56,6 +68,11 @@ Vagrant.configure("2") do |config|
     vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
     vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
     vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
+    vb.customize ["modifyvm", :id, "--audio-driver", detect_audio_driver]
+    vb.customize ["modifyvm", :id, "--audio-controller", "hda"]
+    vb.customize ["modifyvm", :id, "--audio-enabled", "on"]
+    vb.customize ["modifyvm", :id, "--audio-out", "on"]
+    vb.customize ["modifyvm", :id, "--audio-in", "off"]
   end
 
   # ── Provisionamento ──────────────────────────────────
@@ -122,6 +139,7 @@ APTCONF
       xfce4-whiskermenu-plugin xfce4-taskmanager mousepad \
       lightdm lightdm-gtk-greeter \
       dbus-x11 xdg-utils xclip \
+      pulseaudio alsa-utils \
       fonts-noto-color-emoji \
       arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
       google-chrome-stable gh \
