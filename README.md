@@ -18,9 +18,10 @@ Instale os dois programas abaixo **antes** de começar:
 
 | Ferramenta       | Detalhes                                                        |
 |------------------|-----------------------------------------------------------------|
-| **XFCE 4**       | Desktop leve com LightDM e autologin                            |
+| **XFCE 4**       | Desktop leve com LightDM e autologin (sem goodies desnecessários) |
 | **Google Chrome** | Navegador pré-instalado (repo oficial Google)                   |
 | **Git**          | Direto do repositório do Debian                                 |
+| **GitHub CLI**   | `gh` — PRs, issues e repo ops direto do terminal                |
 | **Python 3**     | Com `pip` e `venv`                                              |
 | **PHP**          | CLI + extensões comuns (curl, mbstring, xml, zip, bcmath, intl) |
 | **Composer**     | Gerenciador de dependências PHP                                 |
@@ -30,6 +31,16 @@ Instale os dois programas abaixo **antes** de começar:
 | **pnpm**         | Instalado globalmente via npm                                   |
 | **Claude Code**  | CLI nativa da Anthropic                                         |
 | **ShellCheck**   | Linter para shell scripts                                       |
+| **jq**           | Processador JSON para terminal                                  |
+| **ripgrep**      | Busca ultrarrápida em código (`rg`)                             |
+| **build-essential** | gcc, make e headers — compilação de extensões nativas        |
+| **tmux**         | Multiplexador de terminal                                       |
+| **fzf**          | Fuzzy finder para terminal                                      |
+| **bat**          | `cat` com syntax highlight (alias `bat` → `batcat`)             |
+| **fd-find**      | Busca rápida de arquivos (alias `fd` → `fdfind`)                |
+| **htop**         | Monitor de processos                                            |
+| **tree**         | Visualização de diretórios                                      |
+| **direnv**       | Variáveis de ambiente por projeto                               |
 
 ## Recursos da VM (alocação dinâmica)
 
@@ -61,10 +72,21 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 - **Google Chrome** pré-instalado para navegação dentro da VM.
 - **Chave SSH ED25519** gerada em `~/.ssh/id_ed25519` — a chave pública é exibida no terminal ao final do provisionamento para você copiar direto pro GitHub/GitLab.
 - **`~/projects`** — diretório para seus projetos, já criado.
-- **Alias `pf`** — digitar `pf` no terminal leva direto para `~/projects`.
+- **Aliases** — `pf` (~/projects), `fd` (fdfind), `bat` (batcat).
 - **Docker sem sudo** — o usuário `vagrant` já está no grupo `docker`.
-- **Áudio habilitado** — saída de som via Intel HD Audio (sem microfone).
+- **direnv** — hook ativado no `.bashrc` para carregar `.envrc` automaticamente.
+- **Git config** — `init.defaultBranch` definido como `main`. Lembre-se de configurar `user.name` e `user.email`.
 - **Timezone** configurado para `America/Sao_Paulo` (UTC-3).
+
+## Primeiro uso (após provisionamento)
+
+Após o primeiro `vagrant up`, configure seu nome e e-mail no Git e autentique no GitHub:
+
+```bash
+git config --global user.name "Seu Nome"
+git config --global user.email "seu@email.com"
+gh auth login
+```
 
 ## Comandos principais
 

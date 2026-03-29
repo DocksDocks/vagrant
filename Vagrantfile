@@ -32,18 +32,6 @@ def detect_host_cpus
   end
 end
 
-def detect_audio_driver
-  if HOST_OS =~ /mswin|mingw|cygwin/i
-    "dsound"
-  elsif HOST_OS =~ /darwin/i
-    "coreaudio"
-  elsif HOST_OS =~ /linux/i
-    "pulse"
-  else
-    "none"
-  end
-end
-
 host_ram  = detect_host_memory_mb
 host_cpus = detect_host_cpus
 
@@ -68,11 +56,6 @@ Vagrant.configure("2") do |config|
     vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
     vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
     vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
-    vb.customize ["modifyvm", :id, "--audio-driver", detect_audio_driver]
-    vb.customize ["modifyvm", :id, "--audio-controller", "hda"]
-    vb.customize ["modifyvm", :id, "--audio-enabled", "on"]
-    vb.customize ["modifyvm", :id, "--audio-out", "on"]
-    vb.customize ["modifyvm", :id, "--audio-in", "off"]
   end
 
   # ── Provisionamento ──────────────────────────────────
@@ -102,7 +85,7 @@ APTCONF
     ln -sf /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
     echo "America/Sao_Paulo" > /etc/timezone
 
-    # ── Repos externos (Chrome + Docker) ───────────────────
+    # ── Repos externos (Chrome + Docker + GitHub CLI) ───────
     echo ">> Configurando repositórios externos..."
 
     curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | \
@@ -119,21 +102,29 @@ APTCONF
     echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian ${CODENAME} stable" \
       > /etc/apt/sources.list.d/docker.list
 
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
+      gpg --batch --yes --dearmor -o /etc/apt/keyrings/githubcli.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list
+
     # ── Único update com todos os repos prontos ─────────────
     apt-get update -qq
 
     # ── Instalação em lote ──────────────────────────────────
     echo ">> Instalando todos os pacotes..."
     apt-get install -y -qq \
-      git python3 python3-pip python3-venv shellcheck unzip \
+      git jq ripgrep build-essential tmux wget unzip shellcheck \
+      fd-find fzf bat htop tree direnv \
+      python3 python3-pip python3-venv \
       php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \
-      xfce4 xfce4-goodies xfce4-terminal \
+      xfce4 xfce4-terminal \
+      xfce4-notifyd xfce4-screenshooter xfce4-clipman-plugin \
+      xfce4-whiskermenu-plugin xfce4-taskmanager mousepad \
       lightdm lightdm-gtk-greeter \
       dbus-x11 xdg-utils xclip \
-      pulseaudio xfce4-pulseaudio-plugin alsa-utils \
       fonts-noto-color-emoji \
       arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
-      google-chrome-stable \
+      google-chrome-stable gh \
       docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
     # ── Composer ────────────────────────────────────────────
@@ -246,6 +237,14 @@ MIMEAPPS
     su - vagrant -c 'mkdir -p ~/projects'
     su - vagrant -c 'test -f ~/.ssh/id_ed25519 || ssh-keygen -t ed25519 -C "vagrant@dev-box" -f ~/.ssh/id_ed25519 -N ""'
     su - vagrant -c 'grep -q "alias pf=" ~/.bashrc 2>/dev/null || echo "alias pf=\"cd ~/projects\"" >> ~/.bashrc'
+    su - vagrant -c 'grep -q "alias fd=" ~/.bashrc 2>/dev/null || echo "alias fd=fdfind" >> ~/.bashrc'
+    su - vagrant -c 'grep -q "alias bat=" ~/.bashrc 2>/dev/null || echo "alias bat=batcat" >> ~/.bashrc'
+    su - vagrant -c 'grep -q "direnv hook" ~/.bashrc 2>/dev/null || echo "eval \"\$(direnv hook bash)\"" >> ~/.bashrc'
+
+    # ── Git config ──────────────────────────────────────────
+    su - vagrant -c 'git config --global init.defaultBranch main'
+    su - vagrant -c 'git config --global user.name "Your Name"'
+    su - vagrant -c 'git config --global user.email "you@example.com"'
 
     # ── Resumo ──────────────────────────────────────────────
     echo ""
@@ -253,12 +252,19 @@ MIMEAPPS
     echo "  Provisionamento concluído!"
     echo "══════════════════════════════════════════"
     echo "  git        : $(git --version)"
+    echo "  gh         : $(gh --version | head -1)"
     echo "  python     : $(python3 --version)"
     echo "  php        : $(php --version | head -1)"
     echo "  composer   : $(composer --version 2>&1 | head -1)"
     echo "  docker     : $(docker --version)"
     echo "  compose    : $(docker compose version)"
     echo "  shellcheck : $(shellcheck --version | grep version:)"
+    echo "  jq         : $(jq --version)"
+    echo "  ripgrep    : $(rg --version | head -1)"
+    echo "  tmux       : $(tmux -V)"
+    echo "  bat        : $(batcat --version | head -1)"
+    echo "  fzf        : $(fzf --version)"
+    echo "  htop       : $(htop --version | head -1)"
     su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && echo "  node       : $(node --version)" && echo "  npm        : $(npm --version)" && echo "  pnpm       : $(pnpm --version)"'
     echo "══════════════════════════════════════════"
     echo ""
@@ -267,6 +273,12 @@ MIMEAPPS
     echo "══════════════════════════════════════════"
     cat /home/vagrant/.ssh/id_ed25519.pub
     echo ""
+    echo "══════════════════════════════════════════"
+    echo ""
+    echo "  ⚠ Lembre-se de configurar:"
+    echo "    git config --global user.name \"Seu Nome\""
+    echo "    git config --global user.email \"seu@email.com\""
+    echo "    gh auth login"
     echo "══════════════════════════════════════════"
   SHELL
 end
