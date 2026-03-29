@@ -247,11 +247,11 @@ XFCETERM
       </property>
     </property>
     <property name="panel-2" type="empty">
-      <property name="position" type="string" value="p=12;x=50;y=0"/>
+      <property name="position" type="string" value="p=12;x=0;y=0"/>
       <property name="position-locked" type="bool" value="true"/>
       <property name="size" type="uint" value="48"/>
-      <property name="length" type="uint" value="1"/>
-      <property name="length-adjust" type="bool" value="true"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="length-adjust" type="bool" value="false"/>
       <property name="icon-size" type="uint" value="32"/>
       <property name="plugin-ids" type="array">
         <value type="int" value="9"/>
@@ -292,40 +292,41 @@ XFCETERM
 
     <property name="plugin-8" type="string" value="power-manager-plugin"/>
 
-    <property name="plugin-9" type="string" value="launcher">
-      <property name="items" type="array">
-        <value type="string" value="xfce4-terminal.desktop"/>
-      </property>
+    <!-- Panel 2: expanding separator (left) -->
+    <property name="plugin-9" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
     </property>
 
+    <!-- Panel 2: pinned launchers (Chrome, Thunar, Terminal, Mousepad) -->
     <property name="plugin-10" type="string" value="launcher">
-      <property name="items" type="array">
-        <value type="string" value="thunar.desktop"/>
-      </property>
-    </property>
-
-    <property name="plugin-11" type="string" value="launcher">
       <property name="items" type="array">
         <value type="string" value="google-chrome.desktop"/>
       </property>
     </property>
 
-    <property name="plugin-12" type="string" value="launcher">
+    <property name="plugin-11" type="string" value="launcher">
       <property name="items" type="array">
-        <value type="string" value="mousepad.desktop"/>
+        <value type="string" value="thunar.desktop"/>
       </property>
     </property>
 
-    <property name="plugin-13" type="string" value="separator">
-      <property name="expand" type="bool" value="false"/>
-      <property name="style" type="uint" value="0"/>
+    <property name="plugin-12" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="xfce4-terminal.desktop"/>
+      </property>
     </property>
 
-    <property name="plugin-14" type="string" value="tasklist">
-      <property name="show-labels" type="bool" value="false"/>
-      <property name="flat-buttons" type="bool" value="true"/>
-      <property name="grouping" type="uint" value="1"/>
-      <property name="show-handle" type="bool" value="false"/>
+    <property name="plugin-13" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="org.xfce.mousepad.desktop"/>
+      </property>
+    </property>
+
+    <!-- Panel 2: expanding separator (right) -->
+    <property name="plugin-14" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
     </property>
   </property>
 </channel>
