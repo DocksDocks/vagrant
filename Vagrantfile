@@ -389,6 +389,12 @@ MIMEAPPS
     su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && npm install -g pnpm'
     su - vagrant -c 'curl -fsSL https://claude.ai/install.sh | bash'
 
+    # ── Lazygit (terminal Git UI) ───────────────────────────
+    echo ">> Instalando lazygit..."
+    LAZYGIT_VERSION=$(curl -fsSL "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | jq -r '.tag_name' | sed 's/^v//')
+    curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" | \
+      tar -xz -C /usr/local/bin lazygit
+
     # ── SSH Key + alias + ~/projects ────────────────────────
     echo ">> Configurando SSH key, alias e diretório de projetos..."
     su - vagrant -c 'mkdir -p ~/projects'
@@ -422,6 +428,7 @@ MIMEAPPS
     echo "  bat        : $(batcat --version | head -1)"
     echo "  fzf        : $(fzf --version)"
     echo "  htop       : $(htop --version | head -1)"
+    echo "  lazygit    : $(lazygit --version | head -1)"
     su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && echo "  node       : $(node --version)" && echo "  npm        : $(npm --version)" && echo "  pnpm       : $(pnpm --version)"'
     echo "══════════════════════════════════════════"
     echo ""

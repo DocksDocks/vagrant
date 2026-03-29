@@ -41,6 +41,7 @@ Instale os dois programas abaixo **antes** de começar:
 | **htop**         | Monitor de processos                                            |
 | **tree**         | Visualização de diretórios                                      |
 | **direnv**       | Variáveis de ambiente por projeto                               |
+| **Lazygit**      | Interface Git no terminal (TUI) — staging, commits, branches    |
 
 ## Recursos da VM (alocação dinâmica)
 
