@@ -102,7 +102,7 @@ APTCONF
     ln -sf /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
     echo "America/Sao_Paulo" > /etc/timezone
 
-    # ── Repos externos (Chrome + Docker) ───────────────────
+    # ── Repos externos (Chrome + Docker + GitHub CLI) ───────
     echo ">> Configurando repositórios externos..."
 
     curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | \
@@ -119,21 +119,30 @@ APTCONF
     echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian ${CODENAME} stable" \
       > /etc/apt/sources.list.d/docker.list
 
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
+      gpg --batch --yes --dearmor -o /etc/apt/keyrings/githubcli.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list
+
     # ── Único update com todos os repos prontos ─────────────
     apt-get update -qq
 
     # ── Instalação em lote ──────────────────────────────────
     echo ">> Instalando todos os pacotes..."
     apt-get install -y -qq \
-      git python3 python3-pip python3-venv shellcheck unzip \
+      git jq ripgrep build-essential tmux wget unzip shellcheck \
+      fd-find fzf bat htop tree direnv \
+      python3 python3-pip python3-venv \
       php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \
-      xfce4 xfce4-goodies xfce4-terminal \
+      xfce4 xfce4-terminal \
+      xfce4-notifyd xfce4-screenshooter xfce4-clipman-plugin \
+      xfce4-whiskermenu-plugin xfce4-taskmanager mousepad \
       lightdm lightdm-gtk-greeter \
       dbus-x11 xdg-utils xclip \
-      pulseaudio xfce4-pulseaudio-plugin alsa-utils \
+      pulseaudio alsa-utils \
       fonts-noto-color-emoji \
       arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
-      google-chrome-stable \
+      google-chrome-stable gh \
       docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
     # ── Composer ────────────────────────────────────────────
@@ -208,6 +217,163 @@ XFWM4
 </channel>
 XFCETERM
 
+    # ── Painel XFCE (layout Ubuntu-like: top bar + bottom dock) ──
+    cat > /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<'XFCEPANEL'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-panel" version="1.0">
+  <property name="configver" type="int" value="2"/>
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <value type="int" value="2"/>
+  </property>
+
+  <!-- Panel 1: Top bar (GNOME-style) -->
+  <property name="panels" type="empty">
+    <property name="panel-1" type="empty">
+      <property name="position" type="string" value="p=6;x=0;y=0"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="size" type="uint" value="28"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="length-adjust" type="bool" value="false"/>
+      <property name="background-style" type="uint" value="0"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="1"/>
+        <value type="int" value="2"/>
+        <value type="int" value="3"/>
+        <value type="int" value="4"/>
+        <value type="int" value="5"/>
+        <value type="int" value="6"/>
+        <value type="int" value="7"/>
+        <value type="int" value="8"/>
+      </property>
+    </property>
+
+    <!-- Panel 2: Bottom dock (Ubuntu dash-style) -->
+    <property name="panel-2" type="empty">
+      <property name="position" type="string" value="p=12;x=0;y=0"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="size" type="uint" value="48"/>
+      <property name="length" type="uint" value="0"/>
+      <property name="length-adjust" type="bool" value="true"/>
+      <property name="background-style" type="uint" value="0"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="9"/>
+        <value type="int" value="10"/>
+        <value type="int" value="11"/>
+        <value type="int" value="12"/>
+        <value type="int" value="13"/>
+        <value type="int" value="14"/>
+      </property>
+    </property>
+  </property>
+
+  <!-- Plugin definitions -->
+  <property name="plugins" type="empty">
+    <property name="plugin-1" type="string" value="whiskermenu"/>
+
+    <property name="plugin-2" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+
+    <property name="plugin-3" type="string" value="clock">
+      <property name="digital-format" type="string" value="%a %d %b  %H:%M"/>
+      <property name="mode" type="uint" value="2"/>
+    </property>
+
+    <property name="plugin-4" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+
+    <property name="plugin-5" type="string" value="clipman"/>
+
+    <property name="plugin-6" type="string" value="systray">
+      <property name="square-icons" type="bool" value="true"/>
+    </property>
+
+    <property name="plugin-7" type="string" value="notification-plugin"/>
+
+    <property name="plugin-8" type="string" value="power-manager-plugin"/>
+
+    <property name="plugin-9" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="terminal.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-10" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="filemanager.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-11" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="chrome.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-12" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="mousepad.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-13" type="string" value="separator">
+      <property name="expand" type="bool" value="false"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+
+    <property name="plugin-14" type="string" value="tasklist">
+      <property name="show-labels" type="bool" value="false"/>
+      <property name="flat-buttons" type="bool" value="true"/>
+      <property name="grouping" type="uint" value="1"/>
+      <property name="show-handle" type="bool" value="false"/>
+    </property>
+  </property>
+</channel>
+XFCEPANEL
+
+    # ── Launchers do dock (terminal, file manager, chrome, mousepad) ──
+    mkdir -p /home/vagrant/.config/xfce4/panel/launcher-{9,10,11,12}
+
+    cat > /home/vagrant/.config/xfce4/panel/launcher-9/terminal.desktop <<'LAUNCH1'
+[Desktop Entry]
+Type=Application
+Name=Terminal
+Icon=org.xfce.terminal
+Exec=xfce4-terminal
+StartupNotify=true
+LAUNCH1
+
+    cat > /home/vagrant/.config/xfce4/panel/launcher-10/filemanager.desktop <<'LAUNCH2'
+[Desktop Entry]
+Type=Application
+Name=File Manager
+Icon=org.xfce.thunar
+Exec=thunar
+StartupNotify=true
+LAUNCH2
+
+    cat > /home/vagrant/.config/xfce4/panel/launcher-11/chrome.desktop <<'LAUNCH3'
+[Desktop Entry]
+Type=Application
+Name=Google Chrome
+Icon=google-chrome
+Exec=google-chrome-stable
+StartupNotify=true
+LAUNCH3
+
+    cat > /home/vagrant/.config/xfce4/panel/launcher-12/mousepad.desktop <<'LAUNCH4'
+[Desktop Entry]
+Type=Application
+Name=Mousepad
+Icon=org.xfce.mousepad
+Exec=mousepad
+StartupNotify=true
+LAUNCH4
+
     # ── Chrome como navegador padrão ────────────────────────
     mkdir -p /home/vagrant/.config/xfce4/helpers
     cat > /home/vagrant/.config/xfce4/helpers/google-chrome.desktop <<'CHROMEHELPER'
@@ -241,11 +407,25 @@ MIMEAPPS
     su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && npm install -g pnpm'
     su - vagrant -c 'curl -fsSL https://claude.ai/install.sh | bash'
 
+    # ── Lazygit (terminal Git UI) ───────────────────────────
+    echo ">> Instalando lazygit..."
+    LAZYGIT_VERSION=$(curl -fsSL "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | jq -r '.tag_name' | sed 's/^v//')
+    curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" | \
+      tar -xz -C /usr/local/bin lazygit
+
     # ── SSH Key + alias + ~/projects ────────────────────────
     echo ">> Configurando SSH key, alias e diretório de projetos..."
     su - vagrant -c 'mkdir -p ~/projects'
     su - vagrant -c 'test -f ~/.ssh/id_ed25519 || ssh-keygen -t ed25519 -C "vagrant@dev-box" -f ~/.ssh/id_ed25519 -N ""'
     su - vagrant -c 'grep -q "alias pf=" ~/.bashrc 2>/dev/null || echo "alias pf=\"cd ~/projects\"" >> ~/.bashrc'
+    su - vagrant -c 'grep -q "alias fd=" ~/.bashrc 2>/dev/null || echo "alias fd=fdfind" >> ~/.bashrc'
+    su - vagrant -c 'grep -q "alias bat=" ~/.bashrc 2>/dev/null || echo "alias bat=batcat" >> ~/.bashrc'
+    su - vagrant -c 'grep -q "direnv hook" ~/.bashrc 2>/dev/null || echo "eval \"\$(direnv hook bash)\"" >> ~/.bashrc'
+
+    # ── Git config ──────────────────────────────────────────
+    su - vagrant -c 'git config --global init.defaultBranch main'
+    su - vagrant -c 'git config --global user.name "Your Name"'
+    su - vagrant -c 'git config --global user.email "you@example.com"'
 
     # ── Resumo ──────────────────────────────────────────────
     echo ""
@@ -253,12 +433,20 @@ MIMEAPPS
     echo "  Provisionamento concluído!"
     echo "══════════════════════════════════════════"
     echo "  git        : $(git --version)"
+    echo "  gh         : $(gh --version | head -1)"
     echo "  python     : $(python3 --version)"
     echo "  php        : $(php --version | head -1)"
     echo "  composer   : $(composer --version 2>&1 | head -1)"
     echo "  docker     : $(docker --version)"
     echo "  compose    : $(docker compose version)"
     echo "  shellcheck : $(shellcheck --version | grep version:)"
+    echo "  jq         : $(jq --version)"
+    echo "  ripgrep    : $(rg --version | head -1)"
+    echo "  tmux       : $(tmux -V)"
+    echo "  bat        : $(batcat --version | head -1)"
+    echo "  fzf        : $(fzf --version)"
+    echo "  htop       : $(htop --version | head -1)"
+    echo "  lazygit    : $(lazygit --version | head -1)"
     su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && echo "  node       : $(node --version)" && echo "  npm        : $(npm --version)" && echo "  pnpm       : $(pnpm --version)"'
     echo "══════════════════════════════════════════"
     echo ""
@@ -267,6 +455,12 @@ MIMEAPPS
     echo "══════════════════════════════════════════"
     cat /home/vagrant/.ssh/id_ed25519.pub
     echo ""
+    echo "══════════════════════════════════════════"
+    echo ""
+    echo "  ⚠ Lembre-se de configurar:"
+    echo "    git config --global user.name \"Seu Nome\""
+    echo "    git config --global user.email \"seu@email.com\""
+    echo "    gh auth login"
     echo "══════════════════════════════════════════"
   SHELL
 end
