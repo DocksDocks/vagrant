@@ -423,5 +423,9 @@ MIMEAPPS
     echo "    git config --global user.email \"seu@email.com\""
     echo "    gh auth login"
     echo "══════════════════════════════════════════"
+
+    # ── Reboot para ativar graphical.target + autologin ────
+    echo ">> Reiniciando para ativar desktop com autologin..."
+    nohup bash -c 'sleep 5 && reboot' &>/dev/null &
   SHELL
 end
