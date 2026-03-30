@@ -60,7 +60,7 @@ Vagrant.configure("2") do |config|
 
   # ── Recursos da VM (alocação dinâmica) ───────────────
   config.vm.provider "virtualbox" do |vb|
-    vb.name   = "debian12-dev"
+    vb.name   = "debian13-dev"
     vb.gui    = true
     vb.memory = vm_memory
     vb.cpus   = vm_cpus
@@ -245,8 +245,6 @@ XFCETERM
         <value type="int" value="3"/>
         <value type="int" value="4"/>
         <value type="int" value="5"/>
-        <value type="int" value="6"/>
-        <value type="int" value="7"/>
       </property>
     </property>
     <property name="panel-2" type="empty">
@@ -285,10 +283,6 @@ XFCETERM
     <property name="plugin-5" type="string" value="systray">
       <property name="square-icons" type="bool" value="true"/>
     </property>
-
-    <property name="plugin-6" type="string" value="notification-plugin"/>
-
-    <property name="plugin-7" type="string" value="power-manager-plugin"/>
 
     <!-- Panel 2: expanding separator (left) + docklike + expanding separator (right) -->
     <property name="plugin-9" type="string" value="separator">
