@@ -356,18 +356,6 @@ MIMEAPPS
     cp /usr/share/applications/google-chrome.desktop \
        /usr/share/applications/exo-web-browser.desktop 2>/dev/null || true
 
-    # ── VBoxClient autostart (fix clipboard no Trixie) ────────
-    mkdir -p /home/vagrant/.config/autostart
-    cat > /home/vagrant/.config/autostart/vboxclient-clipboard.desktop <<'VBOXCLIP'
-[Desktop Entry]
-Type=Application
-Name=VBoxClient Clipboard
-Exec=/usr/bin/VBoxClient --clipboard
-Hidden=false
-NoDisplay=true
-X-GNOME-Autostart-enabled=true
-VBOXCLIP
-
     chown -R vagrant:vagrant /home/vagrant/.config
 
     # ── Mousepad: Solarized Dark + Line Numbers ─────────────
