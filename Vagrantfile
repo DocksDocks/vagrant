@@ -340,6 +340,10 @@ MIMEAPPS
 
     chown -R vagrant:vagrant /home/vagrant/.config
 
+    # ── Mousepad: Solarized Dark + Line Numbers ─────────────
+    su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view show-line-numbers true'
+    su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view color-scheme "solarized-dark"'
+
     # ── Node.js LTS (via nvm) + pnpm + Claude Code ──────────
     echo ">> Instalando nvm + node LTS + pnpm + claude code..."
     su - vagrant -c 'curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash'
