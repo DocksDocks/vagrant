@@ -142,7 +142,7 @@ APTCONF
       xfce4-notifyd xfce4-screenshooter \
       xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-taskmanager mousepad \
       lightdm lightdm-gtk-greeter \
-      dbus-x11 xdg-utils xclip \
+      dbus-x11 xdg-utils xclip virtualbox-guest-x11 \
       pulseaudio alsa-utils \
       fonts-noto-color-emoji \
       arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
