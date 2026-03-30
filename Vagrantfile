@@ -139,7 +139,7 @@ APTCONF
       python3 python3-pip python3-venv \
       php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \
       xfce4 xfce4-terminal \
-      xfce4-notifyd xfce4-screenshooter xfce4-clipman-plugin \
+      xfce4-notifyd xfce4-screenshooter \
       xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-taskmanager mousepad \
       lightdm lightdm-gtk-greeter \
       dbus-x11 xdg-utils xclip \
@@ -247,7 +247,6 @@ XFCETERM
         <value type="int" value="5"/>
         <value type="int" value="6"/>
         <value type="int" value="7"/>
-        <value type="int" value="8"/>
       </property>
     </property>
     <property name="panel-2" type="empty">
@@ -283,15 +282,13 @@ XFCETERM
       <property name="style" type="uint" value="0"/>
     </property>
 
-    <property name="plugin-5" type="string" value="clipman"/>
-
-    <property name="plugin-6" type="string" value="systray">
+    <property name="plugin-5" type="string" value="systray">
       <property name="square-icons" type="bool" value="true"/>
     </property>
 
-    <property name="plugin-7" type="string" value="notification-plugin"/>
+    <property name="plugin-6" type="string" value="notification-plugin"/>
 
-    <property name="plugin-8" type="string" value="power-manager-plugin"/>
+    <property name="plugin-7" type="string" value="power-manager-plugin"/>
 
     <!-- Panel 2: expanding separator (left) + docklike + expanding separator (right) -->
     <property name="plugin-9" type="string" value="separator">
