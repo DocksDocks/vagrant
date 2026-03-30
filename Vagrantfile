@@ -156,6 +156,9 @@ APTCONF
     # ── Docker (grupo) ──────────────────────────────────────
     usermod -aG docker vagrant
 
+    # ── Senha do usuário vagrant ────────────────────────────
+    echo 'vagrant:docks' | chpasswd
+
     # ── LightDM autologin ───────────────────────────────────
     mkdir -p /etc/lightdm/lightdm.conf.d
     cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<'LIGHTDM'
