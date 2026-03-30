@@ -406,8 +406,11 @@ MIMEAPPS
     echo "    gh auth login"
     echo "══════════════════════════════════════════"
 
-    # ── Reboot para ativar graphical.target + autologin ────
-    echo ">> Reiniciando para ativar desktop com autologin..."
-    nohup bash -c 'sleep 5 && reboot' &>/dev/null &
+    # ── Reboot para ativar graphical.target + autologin (só no primeiro provisionamento) ────
+    if [ ! -f /var/lib/vagrant-provisioned ]; then
+      touch /var/lib/vagrant-provisioned
+      echo ">> Reiniciando para ativar desktop com autologin..."
+      nohup bash -c 'sleep 5 && reboot' &>/dev/null &
+    fi
   SHELL
 end
