@@ -363,7 +363,7 @@ MIMEAPPS
     su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view color-scheme "solarized-dark"'
 
     # ── Tilix: transparência do terminal ────────────────────
-    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix.Profile:/com/gexperts/Tilix/profiles/default/ background-transparency-percent 55'
+    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix.Profile:/com/gexperts/Tilix/profiles/default/ background-transparency-percent 18'
 
     # ── Node.js LTS (via nvm) + pnpm + Claude Code ──────────
     echo ">> Instalando nvm + node LTS + pnpm + claude code..."
