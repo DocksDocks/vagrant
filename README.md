@@ -1,6 +1,6 @@
-# Debian 12 Dev Box
+# Debian 13 Dev Box
 
-Ambiente de desenvolvimento completo rodando em uma VM Debian 12 (Bookworm), provisionado automaticamente pelo Vagrant. Debian é mais leve que Ubuntu (~180 MB RAM base vs ~400 MB), usa `apt` igualmente, e mantém compatibilidade total com todas as ferramentas.
+Ambiente de desenvolvimento completo rodando em uma VM Debian 13 (Trixie), provisionado automaticamente pelo Vagrant. Debian é mais leve que Ubuntu (~180 MB RAM base vs ~400 MB), usa `apt` igualmente, e mantém compatibilidade total com todas as ferramentas.
 
 ## Pré-requisitos
 
@@ -34,7 +34,7 @@ Instale os dois programas abaixo **antes** de começar:
 | **jq**           | Processador JSON para terminal                                  |
 | **ripgrep**      | Busca ultrarrápida em código (`rg`)                             |
 | **build-essential** | gcc, make e headers — compilação de extensões nativas        |
-| **tmux**         | Multiplexador de terminal                                       |
+| **Tilix**        | Terminal com split panes (substitui tmux com GUI)                |
 | **fzf**          | Fuzzy finder para terminal                                      |
 | **bat**          | `cat` com syntax highlight (alias `bat` → `batcat`)             |
 | **fd-find**      | Busca rápida de arquivos (alias `fd` → `fdfind`)                |
@@ -68,17 +68,20 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 ## Extras configurados automaticamente
 
 - **Desktop XFCE** com autologin — ao rodar `vagrant up`, a janela do VirtualBox abre direto no desktop sem pedir senha.
-- **Layout Ubuntu-like** — barra superior (whiskermenu, relógio centralizado, systray) + dock inferior centralizado (ícones de apps fixos + janelas abertas sem labels).
-- **Dock com apps fixos** — Terminal, Thunar, Chrome e Mousepad prontos para uso com um clique.
+- **Layout Ubuntu-like** — barra superior (whiskermenu, relógio centralizado, systray) + dock inferior centralizado com Docklike (ícones de apps fixos que também mostram janelas abertas, como o dock do Ubuntu).
+- **Dock com apps fixos** — Chrome, Thunar, Tilix e Mousepad prontos para uso com um clique. Apps abertos aparecem no mesmo ícone.
 - **Tema Arc-Dark** + ícones **Papirus-Dark** + fonte **Noto Sans** + cursor **DMZ-White** — visual moderno e limpo em dark mode.
-- **Clipboard bidirecional** e **drag-and-drop** entre host e VM.
+- **Drag-and-drop** entre host e VM (clipboard pendente fix upstream VirtualBox 7.2 + Trixie).
 - **Google Chrome** pré-instalado para navegação dentro da VM.
 - **Chave SSH ED25519** gerada em `~/.ssh/id_ed25519` — a chave pública é exibida no terminal ao final do provisionamento para você copiar direto pro GitHub/GitLab.
 - **`~/projects`** — diretório para seus projetos, já criado.
 - **Aliases** — `pf` (~/projects), `fd` (fdfind), `bat` (batcat).
 - **Docker sem sudo** — o usuário `vagrant` já está no grupo `docker`.
 - **direnv** — hook ativado no `.bashrc` para carregar `.envrc` automaticamente.
+- **Tilix** com 18% de transparência como terminal padrão no dock.
+- **Mousepad** com tema Solarized Dark e números de linha ativados.
 - **Áudio habilitado** — saída de som via Intel HD Audio (sem microfone).
+- **Senha** do usuário `vagrant`: `docks`.
 - **Git config** — `init.defaultBranch` definido como `main`. Lembre-se de configurar `user.name` e `user.email`.
 - **Timezone** configurado para `America/Sao_Paulo` (UTC-3).
 
@@ -100,7 +103,7 @@ gh auth login
 vagrant up
 ```
 
-Na primeira execução, o Vagrant baixa a imagem do Debian 12, cria a VM no VirtualBox e roda todo o provisionamento (instalação dos pacotes e desktop XFCE). Isso leva alguns minutos dependendo da sua conexão. A janela do VirtualBox abre automaticamente com o desktop XFCE e autologin como `vagrant`.
+Na primeira execução, o Vagrant baixa a imagem do Debian 13, cria a VM no VirtualBox e roda todo o provisionamento (instalação dos pacotes e desktop XFCE). Isso leva alguns minutos dependendo da sua conexão. A VM reinicia automaticamente após o provisionamento e abre o desktop XFCE com autologin como `vagrant`.
 
 ### Acessar a VM via SSH
 
