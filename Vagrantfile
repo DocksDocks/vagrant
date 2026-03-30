@@ -142,12 +142,27 @@ APTCONF
       xfce4-notifyd xfce4-screenshooter \
       xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-taskmanager mousepad \
       lightdm lightdm-gtk-greeter \
-      dbus-x11 xdg-utils xclip virtualbox-guest-x11 \
+      dbus-x11 xdg-utils xclip \
       pulseaudio alsa-utils \
       fonts-noto-color-emoji \
       arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
       google-chrome-stable gh \
       docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # ── VirtualBox Guest Additions (clipboard + auto-resize) ──
+    echo ">> Instalando VirtualBox Guest Additions..."
+    apt-get install -y -qq linux-headers-$(uname -r) dkms
+    VBOX_VERSION=$(cat /home/vagrant/.vbox_version 2>/dev/null || echo "7.2.10")
+    VBOX_ISO="/home/vagrant/VBoxGuestAdditions_${VBOX_VERSION}.iso"
+    if [ ! -f "$VBOX_ISO" ]; then
+      curl -fsSL -o "$VBOX_ISO" "https://download.virtualbox.org/virtualbox/${VBOX_VERSION}/VBoxGuestAdditions_${VBOX_VERSION}.iso" || true
+    fi
+    if [ -f "$VBOX_ISO" ]; then
+      mount -o loop "$VBOX_ISO" /mnt 2>/dev/null || true
+      /mnt/VBoxLinuxAdditions.run --nox11 || true
+      umount /mnt 2>/dev/null || true
+      rm -f "$VBOX_ISO"
+    fi
 
     # ── Composer ────────────────────────────────────────────
     echo ">> Instalando composer..."
