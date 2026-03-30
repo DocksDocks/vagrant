@@ -51,7 +51,7 @@ vm_memory = [[host_ram / 4, 2048].max, 8192].min
 vm_cpus   = [[host_cpus / 2, 1].max, 4].min
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "debian/bookworm64"
+  config.vm.box = "debian/testing64"
   config.vm.hostname = "dev-box"
 
   # ── Rede ──────────────────────────────────────────────
@@ -116,6 +116,10 @@ APTCONF
 
     ARCH=$(dpkg --print-architecture)
     CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
+    # Docker pode não ter repo para trixie ainda — fallback para bookworm
+    if ! curl -fsSL "https://download.docker.com/linux/debian/dists/${CODENAME}/Release" &>/dev/null; then
+      CODENAME="bookworm"
+    fi
     echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian ${CODENAME} stable" \
       > /etc/apt/sources.list.d/docker.list
 
@@ -136,7 +140,7 @@ APTCONF
       php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \
       xfce4 xfce4-terminal \
       xfce4-notifyd xfce4-screenshooter xfce4-clipman-plugin \
-      xfce4-whiskermenu-plugin xfce4-taskmanager mousepad \
+      xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-taskmanager mousepad \
       lightdm lightdm-gtk-greeter \
       dbus-x11 xdg-utils xclip \
       pulseaudio alsa-utils \
@@ -257,9 +261,6 @@ XFCETERM
         <value type="int" value="9"/>
         <value type="int" value="10"/>
         <value type="int" value="11"/>
-        <value type="int" value="12"/>
-        <value type="int" value="13"/>
-        <value type="int" value="14"/>
       </property>
     </property>
   </property>
@@ -292,39 +293,15 @@ XFCETERM
 
     <property name="plugin-8" type="string" value="power-manager-plugin"/>
 
-    <!-- Panel 2: expanding separator (left) -->
+    <!-- Panel 2: expanding separator (left) + docklike + expanding separator (right) -->
     <property name="plugin-9" type="string" value="separator">
       <property name="expand" type="bool" value="true"/>
       <property name="style" type="uint" value="0"/>
     </property>
 
-    <!-- Panel 2: pinned launchers (Chrome, Thunar, Terminal, Mousepad) -->
-    <property name="plugin-10" type="string" value="launcher">
-      <property name="items" type="array">
-        <value type="string" value="google-chrome.desktop"/>
-      </property>
-    </property>
+    <property name="plugin-10" type="string" value="docklike"/>
 
-    <property name="plugin-11" type="string" value="launcher">
-      <property name="items" type="array">
-        <value type="string" value="thunar.desktop"/>
-      </property>
-    </property>
-
-    <property name="plugin-12" type="string" value="launcher">
-      <property name="items" type="array">
-        <value type="string" value="xfce4-terminal.desktop"/>
-      </property>
-    </property>
-
-    <property name="plugin-13" type="string" value="launcher">
-      <property name="items" type="array">
-        <value type="string" value="org.xfce.mousepad.desktop"/>
-      </property>
-    </property>
-
-    <!-- Panel 2: expanding separator (right) -->
-    <property name="plugin-14" type="string" value="separator">
+    <property name="plugin-11" type="string" value="separator">
       <property name="expand" type="bool" value="true"/>
       <property name="style" type="uint" value="0"/>
     </property>
@@ -335,6 +312,12 @@ XFCEPANEL
     # Copia para xfconf xdg path (onde xfconfd lê no primeiro login)
     cp /etc/xdg/xfce4/panel/default.xml \
        /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
+
+    # ── Docklike: apps fixos (Chrome, Thunar, Terminal, Mousepad) ──
+    mkdir -p /etc/xdg/xfce4/panel
+    cat > /etc/xdg/xfce4/panel/docklike-10.rc <<'DOCKLIKE'
+pinned_apps=google-chrome.desktop;thunar.desktop;xfce4-terminal.desktop;org.xfce.mousepad.desktop;
+DOCKLIKE
 
     # ── Chrome como navegador padrão ────────────────────────
     mkdir -p /home/vagrant/.config/xfce4/helpers

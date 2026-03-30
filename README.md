@@ -1,6 +1,6 @@
-# Debian 12 Dev Box
+# Debian 13 Dev Box
 
-Ambiente de desenvolvimento completo rodando em uma VM Debian 12 (Bookworm), provisionado automaticamente pelo Vagrant. Debian é mais leve que Ubuntu (~180 MB RAM base vs ~400 MB), usa `apt` igualmente, e mantém compatibilidade total com todas as ferramentas.
+Ambiente de desenvolvimento completo rodando em uma VM Debian 13 (Trixie), provisionado automaticamente pelo Vagrant. Debian é mais leve que Ubuntu (~180 MB RAM base vs ~400 MB), usa `apt` igualmente, e mantém compatibilidade total com todas as ferramentas.
 
 ## Pré-requisitos
 
@@ -68,8 +68,8 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 ## Extras configurados automaticamente
 
 - **Desktop XFCE** com autologin — ao rodar `vagrant up`, a janela do VirtualBox abre direto no desktop sem pedir senha.
-- **Layout Ubuntu-like** — barra superior (whiskermenu, relógio centralizado, systray) + dock inferior centralizado (ícones de apps fixos + janelas abertas sem labels).
-- **Dock com apps fixos** — Terminal, Thunar, Chrome e Mousepad prontos para uso com um clique.
+- **Layout Ubuntu-like** — barra superior (whiskermenu, relógio centralizado, systray) + dock inferior centralizado com Docklike (ícones de apps fixos que também mostram janelas abertas, como o dock do Ubuntu).
+- **Dock com apps fixos** — Chrome, Thunar, Terminal e Mousepad prontos para uso com um clique. Apps abertos aparecem no mesmo ícone.
 - **Tema Arc-Dark** + ícones **Papirus-Dark** + fonte **Noto Sans** + cursor **DMZ-White** — visual moderno e limpo em dark mode.
 - **Clipboard bidirecional** e **drag-and-drop** entre host e VM.
 - **Google Chrome** pré-instalado para navegação dentro da VM.
