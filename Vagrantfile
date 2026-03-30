@@ -151,7 +151,7 @@ APTCONF
 
     # ── VirtualBox Guest Additions (clipboard + auto-resize) ──
     echo ">> Instalando VirtualBox Guest Additions..."
-    apt-get install -y -qq linux-headers-$(uname -r) dkms
+    apt-get install -y -qq linux-headers-amd64 dkms
     VBOX_VERSION=$(cat /home/vagrant/.vbox_version 2>/dev/null || echo "7.2.10")
     VBOX_ISO="/home/vagrant/VBoxGuestAdditions_${VBOX_VERSION}.iso"
     if [ ! -f "$VBOX_ISO" ]; then
