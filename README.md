@@ -34,7 +34,7 @@ Instale os dois programas abaixo **antes** de começar:
 | **jq**           | Processador JSON para terminal                                  |
 | **ripgrep**      | Busca ultrarrápida em código (`rg`)                             |
 | **build-essential** | gcc, make e headers — compilação de extensões nativas        |
-| **tmux**         | Multiplexador de terminal                                       |
+| **Tilix**        | Terminal com split panes (substitui tmux com GUI)                |
 | **fzf**          | Fuzzy finder para terminal                                      |
 | **bat**          | `cat` com syntax highlight (alias `bat` → `batcat`)             |
 | **fd-find**      | Busca rápida de arquivos (alias `fd` → `fdfind`)                |
@@ -69,7 +69,7 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 
 - **Desktop XFCE** com autologin — ao rodar `vagrant up`, a janela do VirtualBox abre direto no desktop sem pedir senha.
 - **Layout Ubuntu-like** — barra superior (whiskermenu, relógio centralizado, systray) + dock inferior centralizado com Docklike (ícones de apps fixos que também mostram janelas abertas, como o dock do Ubuntu).
-- **Dock com apps fixos** — Chrome, Thunar, Terminal e Mousepad prontos para uso com um clique. Apps abertos aparecem no mesmo ícone.
+- **Dock com apps fixos** — Chrome, Thunar, Tilix e Mousepad prontos para uso com um clique. Apps abertos aparecem no mesmo ícone.
 - **Tema Arc-Dark** + ícones **Papirus-Dark** + fonte **Noto Sans** + cursor **DMZ-White** — visual moderno e limpo em dark mode.
 - **Clipboard bidirecional** e **drag-and-drop** entre host e VM.
 - **Google Chrome** pré-instalado para navegação dentro da VM.

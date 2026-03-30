@@ -134,7 +134,7 @@ APTCONF
     # ── Instalação em lote ──────────────────────────────────
     echo ">> Instalando todos os pacotes..."
     apt-get install -y -qq \
-      git jq ripgrep build-essential tmux wget unzip shellcheck \
+      git jq ripgrep build-essential tilix wget unzip shellcheck \
       fd-find fzf bat htop tree direnv \
       python3 python3-pip python3-venv \
       php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \
@@ -308,7 +308,7 @@ XFCEPANEL
     mkdir -p /etc/xdg/xfce4/panel
     cat > /etc/xdg/xfce4/panel/docklike.rc <<'DOCKLIKE'
 [user]
-pinned=/usr/share/applications/google-chrome.desktop;/usr/share/applications/thunar.desktop;/usr/share/applications/xfce4-terminal.desktop;/usr/share/applications/org.xfce.mousepad.desktop
+pinned=/usr/share/applications/google-chrome.desktop;/usr/share/applications/thunar.desktop;/usr/share/applications/com.gexperts.Tilix.desktop;/usr/share/applications/org.xfce.mousepad.desktop
 DOCKLIKE
     # Copia com ID do plugin para cobertura completa
     cp /etc/xdg/xfce4/panel/docklike.rc /etc/xdg/xfce4/panel/docklike-10.rc
@@ -385,7 +385,7 @@ MIMEAPPS
     echo "  shellcheck : $(shellcheck --version | grep version:)"
     echo "  jq         : $(jq --version)"
     echo "  ripgrep    : $(rg --version | head -1)"
-    echo "  tmux       : $(tmux -V)"
+    echo "  tilix      : $(tilix --version 2>&1 | head -1)"
     echo "  bat        : $(batcat --version | head -1)"
     echo "  fzf        : $(fzf --version)"
     echo "  htop       : $(htop --version | head -1)"
