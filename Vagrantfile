@@ -316,8 +316,11 @@ XFCEPANEL
     # ── Docklike: apps fixos (Chrome, Thunar, Terminal, Mousepad) ──
     mkdir -p /etc/xdg/xfce4/panel
     cat > /etc/xdg/xfce4/panel/docklike-10.rc <<'DOCKLIKE'
-pinned_apps=google-chrome.desktop;thunar.desktop;xfce4-terminal.desktop;org.xfce.mousepad.desktop;
+[user]
+pinned=google-chrome.desktop;thunar.desktop;xfce4-terminal.desktop;org.xfce.mousepad.desktop;
 DOCKLIKE
+    # Fallback sem ID no nome
+    cp /etc/xdg/xfce4/panel/docklike-10.rc /etc/xdg/xfce4/panel/docklike.rc
 
     # ── Chrome como navegador padrão ────────────────────────
     mkdir -p /home/vagrant/.config/xfce4/helpers
