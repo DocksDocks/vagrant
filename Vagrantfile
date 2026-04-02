@@ -134,7 +134,7 @@ APTCONF
     # ── Instalação em lote ──────────────────────────────────
     echo ">> Instalando todos os pacotes..."
     apt-get install -y -qq \
-      git jq ripgrep build-essential tilix libharfbuzz-gobject0 wget unzip shellcheck \
+      git jq ripgrep build-essential tilix libharfbuzz-gobject0 wget unzip shellcheck rsync \
       fd-find fzf bat htop tree direnv \
       python3 python3-pip python3-venv \
       php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \
@@ -142,7 +142,7 @@ APTCONF
       xfce4-notifyd xfce4-screenshooter \
       xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-taskmanager mousepad \
       lightdm lightdm-gtk-greeter \
-      dbus-x11 xdg-utils xclip \
+      dbus-x11 xdg-utils xclip libwayland-client0 \
       pulseaudio alsa-utils \
       fonts-noto-color-emoji \
       arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
@@ -152,7 +152,7 @@ APTCONF
     # ── VirtualBox Guest Additions (clipboard + auto-resize) ──
     echo ">> Instalando VirtualBox Guest Additions..."
     apt-get install -y -qq linux-headers-amd64 dkms
-    VBOX_VERSION=$(cat /home/vagrant/.vbox_version 2>/dev/null || echo "7.2.10")
+    VBOX_VERSION=$(cat /home/vagrant/.vbox_version 2>/dev/null || VBoxControl --version 2>/dev/null | head -1 | sed 's/r.*//' || echo "7.2.6")
     VBOX_ISO="/home/vagrant/VBoxGuestAdditions_${VBOX_VERSION}.iso"
     if [ ! -f "$VBOX_ISO" ]; then
       curl -fsSL -o "$VBOX_ISO" "https://download.virtualbox.org/virtualbox/${VBOX_VERSION}/VBoxGuestAdditions_${VBOX_VERSION}.iso" || true
@@ -163,6 +163,32 @@ APTCONF
       umount /mnt 2>/dev/null || true
       rm -f "$VBOX_ISO"
     fi
+
+    # ── VBoxClient-all autostart (clipboard + auto-resize + drag-and-drop) ──
+    mkdir -p /home/vagrant/.config/autostart
+    cat > /home/vagrant/.config/autostart/vboxclient-all.desktop << 'VBOX'
+[Desktop Entry]
+Type=Application
+Name=VBoxClient All Services
+Exec=sh -c "sleep 3 && VBoxClient-all"
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+VBOX
+    chown -R vagrant:vagrant /home/vagrant/.config/autostart
+
+    # ── GTK3 headerbar button fix (Arc-Dark CSD styling) ──
+    mkdir -p /home/vagrant/.config/gtk-3.0
+    cat > /home/vagrant/.config/gtk-3.0/gtk.css << 'GTKCSS'
+headerbar button:not(.titlebutton) {
+  background-image: image(alpha(currentColor, 0.12));
+  border-radius: 4px;
+}
+headerbar button:not(.titlebutton):hover {
+  background-image: image(alpha(currentColor, 0.22));
+}
+GTKCSS
+    chown -R vagrant:vagrant /home/vagrant/.config/gtk-3.0
 
     # ── Composer ────────────────────────────────────────────
     echo ">> Instalando composer..."
@@ -362,14 +388,28 @@ MIMEAPPS
     su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view show-line-numbers true'
     su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view color-scheme "solarized-dark"'
 
-    # ── Tilix: transparência do terminal ────────────────────
-    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix.Profile:/com/gexperts/Tilix/profiles/default/ background-transparency-percent 18'
+    # ── Tilix: configuração do terminal ──────────────────────
+    glib-compile-schemas /usr/share/glib-2.0/schemas/ 2>/dev/null || true
+    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix theme-variant "dark"' || true
+    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix enable-wide-handle true' || true
+    TILIX_PROF="com.gexperts.Tilix.Profile:/com/gexperts/Tilix/profiles/default/"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF use-theme-colors false"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF background-color \"'#1E1E1E'\""
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF foreground-color \"'#A7A7A7'\""
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF background-transparency-percent 4"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF bold-color-set false"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF cursor-colors-set false"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF highlight-colors-set false"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF badge-color-set false"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF visible-name 'Default'"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF palette \"['#1E1E1E', '#CF6A4C', '#8F9D6A', '#F9EE98', '#7587A6', '#9B859D', '#AFC4DB', '#A7A7A7', '#5F5A60', '#CF6A4C', '#8F9D6A', '#F9EE98', '#7587A6', '#9B859D', '#AFC4DB', '#FFFFFF']\""
 
     # ── Node.js LTS (via nvm) + pnpm + Claude Code ──────────
     echo ">> Instalando nvm + node LTS + pnpm + claude code..."
     su - vagrant -c 'curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash'
     su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && npm install -g pnpm'
     su - vagrant -c 'curl -fsSL https://claude.ai/install.sh | bash' || echo "⚠ Claude Code install falhou (pode ser falta de RAM). Tente instalar manualmente depois: curl -fsSL https://claude.ai/install.sh | bash"
+    su - vagrant -c 'grep -q "\.local/bin" ~/.bashrc 2>/dev/null || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 
     # ── Lazygit (terminal Git UI) ───────────────────────────
     echo ">> Instalando lazygit..."
@@ -385,6 +425,7 @@ MIMEAPPS
     su - vagrant -c 'grep -q "alias fd=" ~/.bashrc 2>/dev/null || echo "alias fd=fdfind" >> ~/.bashrc'
     su - vagrant -c 'grep -q "alias bat=" ~/.bashrc 2>/dev/null || echo "alias bat=batcat" >> ~/.bashrc'
     su - vagrant -c 'grep -q "direnv hook" ~/.bashrc 2>/dev/null || echo "eval \"\$(direnv hook bash)\"" >> ~/.bashrc'
+    su - vagrant -c 'grep -q "XDG_RUNTIME_DIR" ~/.bashrc 2>/dev/null || echo "export XDG_RUNTIME_DIR=/run/user/\$(id -u)" >> ~/.bashrc'
 
     # ── SSOT .claude sync (from DocksDocks/public) ─────────
     if [ ! -f /var/lib/vagrant-claude-synced ]; then
