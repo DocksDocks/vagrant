@@ -164,18 +164,31 @@ APTCONF
       rm -f "$VBOX_ISO"
     fi
 
-    # ── VBoxClient clipboard autostart (workaround VBox 7.x regression) ──
+    # ── VBoxClient-all autostart (clipboard + auto-resize + drag-and-drop) ──
     mkdir -p /home/vagrant/.config/autostart
-    cat > /home/vagrant/.config/autostart/vboxclient-clipboard.desktop << 'CLIP'
+    cat > /home/vagrant/.config/autostart/vboxclient-all.desktop << 'VBOX'
 [Desktop Entry]
 Type=Application
-Name=VBoxClient Clipboard
-Exec=sh -c "sleep 3 && VBoxClient --clipboard"
+Name=VBoxClient All Services
+Exec=sh -c "sleep 3 && VBoxClient-all"
 Hidden=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
-CLIP
+VBOX
     chown -R vagrant:vagrant /home/vagrant/.config/autostart
+
+    # ── GTK3 headerbar button fix (Arc-Dark CSD styling) ──
+    mkdir -p /home/vagrant/.config/gtk-3.0
+    cat > /home/vagrant/.config/gtk-3.0/gtk.css << 'GTKCSS'
+headerbar button:not(.titlebutton) {
+  background-image: image(alpha(currentColor, 0.12));
+  border-radius: 4px;
+}
+headerbar button:not(.titlebutton):hover {
+  background-image: image(alpha(currentColor, 0.22));
+}
+GTKCSS
+    chown -R vagrant:vagrant /home/vagrant/.config/gtk-3.0
 
     # ── Composer ────────────────────────────────────────────
     echo ">> Instalando composer..."
@@ -375,8 +388,20 @@ MIMEAPPS
     su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view show-line-numbers true'
     su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view color-scheme "solarized-dark"'
 
-    # ── Tilix: transparência do terminal ────────────────────
-    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix.Profile:/com/gexperts/Tilix/profiles/default/ background-transparency-percent 18'
+    # ── Tilix: configuração do terminal ──────────────────────
+    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix theme-variant "dark"'
+    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix enable-wide-handle true'
+    TILIX_PROF="com.gexperts.Tilix.Profile:/com/gexperts/Tilix/profiles/default/"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF use-theme-colors false"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF background-color \"'#1E1E1E'\""
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF foreground-color \"'#A7A7A7'\""
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF background-transparency-percent 4"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF bold-color-set false"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF cursor-colors-set false"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF highlight-colors-set false"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF badge-color-set false"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF visible-name 'Default'"
+    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF palette \"['#1E1E1E', '#CF6A4C', '#8F9D6A', '#F9EE98', '#7587A6', '#9B859D', '#AFC4DB', '#A7A7A7', '#5F5A60', '#CF6A4C', '#8F9D6A', '#F9EE98', '#7587A6', '#9B859D', '#AFC4DB', '#FFFFFF']\""
 
     # ── Node.js LTS (via nvm) + pnpm + Claude Code ──────────
     echo ">> Instalando nvm + node LTS + pnpm + claude code..."
