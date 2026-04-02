@@ -389,8 +389,9 @@ MIMEAPPS
     su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view color-scheme "solarized-dark"'
 
     # ── Tilix: configuração do terminal ──────────────────────
-    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix theme-variant "dark"'
-    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix enable-wide-handle true'
+    glib-compile-schemas /usr/share/glib-2.0/schemas/ 2>/dev/null || true
+    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix theme-variant "dark"' || true
+    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix enable-wide-handle true' || true
     TILIX_PROF="com.gexperts.Tilix.Profile:/com/gexperts/Tilix/profiles/default/"
     su - vagrant -c "dbus-launch gsettings set $TILIX_PROF use-theme-colors false"
     su - vagrant -c "dbus-launch gsettings set $TILIX_PROF background-color \"'#1E1E1E'\""
