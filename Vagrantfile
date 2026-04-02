@@ -387,12 +387,15 @@ MIMEAPPS
     su - vagrant -c 'grep -q "direnv hook" ~/.bashrc 2>/dev/null || echo "eval \"\$(direnv hook bash)\"" >> ~/.bashrc'
 
     # ── SSOT .claude sync (from DocksDocks/public) ─────────
-    echo ">> Syncing .claude config from SSOT..."
-    rm -rf /tmp/public
-    su - vagrant -c 'git clone --depth 1 https://github.com/DocksDocks/public.git /tmp/public'
-    su - vagrant -c 'mkdir -p /home/vagrant/.claude'
-    su - vagrant -c 'rsync -a /tmp/public/ssot/.claude/ /home/vagrant/.claude/'
-    rm -rf /tmp/public
+    if [ ! -f /var/lib/vagrant-claude-synced ]; then
+      echo ">> Syncing .claude config from SSOT..."
+      su - vagrant -c 'git clone --depth 1 https://github.com/DocksDocks/public.git /tmp/public'
+      su - vagrant -c 'rsync -a /tmp/public/ssot/.claude/ /home/vagrant/.claude/'
+      rm -rf /tmp/public
+      touch /var/lib/vagrant-claude-synced
+    else
+      echo ">> SSOT .claude already synced, skipping."
+    fi
 
     # ── Git config ──────────────────────────────────────────
     su - vagrant -c 'git config --global init.defaultBranch main'
