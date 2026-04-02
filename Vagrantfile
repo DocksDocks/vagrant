@@ -142,7 +142,7 @@ APTCONF
       xfce4-notifyd xfce4-screenshooter \
       xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-taskmanager mousepad \
       lightdm lightdm-gtk-greeter \
-      dbus-x11 xdg-utils xclip \
+      dbus-x11 xdg-utils xclip libwayland-client0 \
       pulseaudio alsa-utils \
       fonts-noto-color-emoji \
       arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
@@ -163,6 +163,19 @@ APTCONF
       umount /mnt 2>/dev/null || true
       rm -f "$VBOX_ISO"
     fi
+
+    # ── VBoxClient clipboard autostart (workaround VBox 7.x regression) ──
+    mkdir -p /home/vagrant/.config/autostart
+    cat > /home/vagrant/.config/autostart/vboxclient-clipboard.desktop << 'CLIP'
+[Desktop Entry]
+Type=Application
+Name=VBoxClient Clipboard
+Exec=sh -c "sleep 3 && VBoxClient --clipboard"
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+CLIP
+    chown -R vagrant:vagrant /home/vagrant/.config/autostart
 
     # ── Composer ────────────────────────────────────────────
     echo ">> Instalando composer..."
@@ -370,6 +383,7 @@ MIMEAPPS
     su - vagrant -c 'curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash'
     su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && npm install -g pnpm'
     su - vagrant -c 'curl -fsSL https://claude.ai/install.sh | bash' || echo "⚠ Claude Code install falhou (pode ser falta de RAM). Tente instalar manualmente depois: curl -fsSL https://claude.ai/install.sh | bash"
+    su - vagrant -c 'grep -q "\.claude/local/bin" ~/.bashrc 2>/dev/null || echo "export PATH=\"\$HOME/.claude/local/bin:\$PATH\"" >> ~/.bashrc'
 
     # ── Lazygit (terminal Git UI) ───────────────────────────
     echo ">> Instalando lazygit..."
@@ -385,6 +399,7 @@ MIMEAPPS
     su - vagrant -c 'grep -q "alias fd=" ~/.bashrc 2>/dev/null || echo "alias fd=fdfind" >> ~/.bashrc'
     su - vagrant -c 'grep -q "alias bat=" ~/.bashrc 2>/dev/null || echo "alias bat=batcat" >> ~/.bashrc'
     su - vagrant -c 'grep -q "direnv hook" ~/.bashrc 2>/dev/null || echo "eval \"\$(direnv hook bash)\"" >> ~/.bashrc'
+    su - vagrant -c 'grep -q "XDG_RUNTIME_DIR" ~/.bashrc 2>/dev/null || echo "export XDG_RUNTIME_DIR=/run/user/\$(id -u)" >> ~/.bashrc'
 
     # ── SSOT .claude sync (from DocksDocks/public) ─────────
     if [ ! -f /var/lib/vagrant-claude-synced ]; then

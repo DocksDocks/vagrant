@@ -71,7 +71,7 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 - **Layout Ubuntu-like** — barra superior (whiskermenu, relógio centralizado, systray) + dock inferior centralizado com Docklike (ícones de apps fixos que também mostram janelas abertas, como o dock do Ubuntu).
 - **Dock com apps fixos** — Chrome, Thunar, Tilix e Mousepad prontos para uso com um clique. Apps abertos aparecem no mesmo ícone.
 - **Tema Arc-Dark** + ícones **Papirus-Dark** + fonte **Noto Sans** + cursor **DMZ-White** — visual moderno e limpo em dark mode.
-- **Drag-and-drop** entre host e VM (clipboard pendente fix upstream VirtualBox 7.2 + Trixie).
+- **Clipboard e drag-and-drop** bidirecional entre host e VM.
 - **Google Chrome** pré-instalado para navegação dentro da VM.
 - **Chave SSH ED25519** gerada em `~/.ssh/id_ed25519` — a chave pública é exibida no terminal ao final do provisionamento para você copiar direto pro GitHub/GitLab.
 - **`~/projects`** — diretório para seus projetos, já criado.
