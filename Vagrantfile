@@ -164,6 +164,14 @@ APTCONF
       rm -f "$VBOX_ISO"
     fi
 
+    # Blacklist vboxvideo to prevent conflict with vmwgfx (the correct driver for VMSVGA)
+    cat > /etc/modprobe.d/blacklist-vboxvideo.conf << 'MODPROBE'
+blacklist vboxvideo
+MODPROBE
+
+    # Rebuild GA modules for all installed kernels
+    /sbin/rcvboxadd setup || true
+
     # ── VBoxClient-all autostart (clipboard + auto-resize + drag-and-drop) ──
     mkdir -p /home/vagrant/.config/autostart
     cat > /home/vagrant/.config/autostart/vboxclient-all.desktop << 'VBOX'
@@ -175,6 +183,15 @@ Hidden=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
 VBOX
+    cat > /home/vagrant/.config/autostart/vbox-autoresize.desktop << 'AUTORESIZE'
+[Desktop Entry]
+Type=Application
+Name=VBox Auto Resize
+Exec=sh -c "sleep 5 && xrandr --output Virtual-1 --auto 2>/dev/null || xrandr --output VGA-1 --auto 2>/dev/null || true"
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+AUTORESIZE
     chown -R vagrant:vagrant /home/vagrant/.config/autostart
 
     # ── GTK3 headerbar button fix (Arc-Dark CSD styling) ──
