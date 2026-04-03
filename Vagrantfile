@@ -217,12 +217,16 @@ GTKCSS
 
     # ── LightDM autologin ───────────────────────────────────
     mkdir -p /etc/lightdm/lightdm.conf.d
-    cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<'LIGHTDM'
+    # Detect actual XFCE session name (varies between Debian versions)
+    XFCE_SESSION="xfce"
+    [ -f /usr/share/xsessions/xfce.desktop ] || XFCE_SESSION="xfce4"
+    cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<LIGHTDM
 [Seat:*]
+autologin-guest=false
 autologin-user=vagrant
 autologin-user-timeout=0
-user-session=xfce
-autologin-session=xfce
+user-session=${XFCE_SESSION}
+autologin-session=${XFCE_SESSION}
 LIGHTDM
 
     getent group autologin >/dev/null || groupadd autologin
@@ -264,6 +268,8 @@ XSETTINGS
   <property name="general" type="empty">
     <property name="theme" type="string" value="Arc-Dark"/>
     <property name="title_font" type="string" value="Noto Sans Bold 10"/>
+    <property name="use_compositing" type="bool" value="false"/>
+    <property name="vblank_mode" type="string" value="off"/>
   </property>
 </channel>
 XFWM4
@@ -401,8 +407,8 @@ MIMEAPPS
     chown -R vagrant:vagrant /home/vagrant/.config
 
     # ── Mousepad: Solarized Dark + Line Numbers ─────────────
-    su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view show-line-numbers true'
-    su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view color-scheme "solarized-dark"'
+    su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view show-line-numbers true' || true
+    su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view color-scheme "solarized-dark"' || true
 
     # ── Tilix: configuração do terminal ──────────────────────
     # Uses dconf directly instead of gsettings to avoid schema compilation issues.
@@ -426,7 +432,7 @@ highlight-colors-set=false
 badge-color-set=false
 visible-name='Default'
 palette=['#1E1E1E','#CF6A4C','#8F9D6A','#F9EE98','#7587A6','#9B859D','#AFC4DB','#A7A7A7','#5F5A60','#CF6A4C','#8F9D6A','#F9EE98','#7587A6','#9B859D','#AFC4DB','#FFFFFF']
-TILIXCONF"
+TILIXCONF" || true
 
     # ── Node.js LTS (via nvm) + pnpm + Claude Code ──────────
     echo ">> Instalando nvm + node LTS + pnpm + claude code..."
