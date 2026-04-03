@@ -222,6 +222,7 @@ GTKCSS
 autologin-user=vagrant
 autologin-user-timeout=0
 user-session=xfce
+autologin-session=xfce
 LIGHTDM
 
     getent group autologin >/dev/null || groupadd autologin
