@@ -65,7 +65,7 @@ Vagrant.configure("2") do |config|
     vb.memory = vm_memory
     vb.cpus   = vm_cpus
     vb.customize ["modifyvm", :id, "--vram", "128"]
-    vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
+    vb.customize ["modifyvm", :id, "--graphicscontroller", "vboxsvga"]
     vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
     vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
     vb.customize ["modifyvm", :id, "--audio-driver", detect_audio_driver]
@@ -164,13 +164,11 @@ APTCONF
       rm -f "$VBOX_ISO"
     fi
 
-    # Blacklist vboxvideo to prevent conflict with vmwgfx (the correct driver for VMSVGA)
-    cat > /etc/modprobe.d/blacklist-vboxvideo.conf << 'MODPROBE'
-blacklist vboxvideo
+    # Blacklist vmwgfx to prevent conflict with vboxvideo (the correct driver for VBoxSVGA)
+    cat > /etc/modprobe.d/blacklist-vmwgfx.conf << 'MODPROBE'
+install vmwgfx /bin/true
 MODPROBE
-
-    # Rebuild GA modules for all installed kernels
-    /sbin/rcvboxadd setup || true
+    update-initramfs -u -k all 2>/dev/null || true
 
     # ── VBoxClient-all autostart (clipboard + auto-resize + drag-and-drop) ──
     mkdir -p /home/vagrant/.config/autostart
