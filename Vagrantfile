@@ -163,6 +163,8 @@ APTCONF
       umount /mnt 2>/dev/null || true
       rm -f "$VBOX_ISO"
     fi
+    # Ensure GA services (including VBoxDRMClient for VMSVGA resize) are enabled
+    systemctl enable vboxadd-service 2>/dev/null || true
 
     # ── VBoxClient-all autostart (clipboard + auto-resize + drag-and-drop) ──
     mkdir -p /home/vagrant/.config/autostart
@@ -170,7 +172,7 @@ APTCONF
 [Desktop Entry]
 Type=Application
 Name=VBoxClient All Services
-Exec=sh -c "sleep 3 && VBoxClient-all"
+Exec=sh -c "sleep 3 && VBoxClient-all && VBoxClient --vmsvga"
 Hidden=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
@@ -179,7 +181,7 @@ VBOX
 [Desktop Entry]
 Type=Application
 Name=VBox Auto Resize
-Exec=sh -c "sleep 5 && xrandr --output Virtual-1 --auto 2>/dev/null || xrandr --output VGA-1 --auto 2>/dev/null || true"
+Exec=sh -c "sleep 5 && xrandr --output Virtual-1 --auto 2>/dev/null || xrandr --output Virtual1 --auto 2>/dev/null || xrandr --output VGA-1 --auto 2>/dev/null || true"
 Hidden=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
