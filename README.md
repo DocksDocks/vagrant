@@ -78,11 +78,12 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 - **Aliases** — `pf` (~/projects), `fd` (fdfind), `bat` (batcat).
 - **Docker sem sudo** — o usuário `vagrant` já está no grupo `docker`.
 - **direnv** — hook ativado no `.bashrc` para carregar `.envrc` automaticamente.
-- **Tilix** com 18% de transparência como terminal padrão no dock.
+- **Tilix** com 4% de transparência como terminal padrão no dock.
 - **Mousepad** com tema Solarized Dark e números de linha ativados.
 - **Áudio habilitado** — saída de som via Intel HD Audio (sem microfone).
 - **Senha** do usuário `vagrant`: `docks`.
 - **Git config** — `init.defaultBranch` definido como `main`. Lembre-se de configurar `user.name` e `user.email`.
+- **Claude Code config** — configuração `.claude` sincronizada automaticamente do repositório SSOT (`DocksDocks/public`) no primeiro provisionamento.
 - **Timezone** configurado para `America/Sao_Paulo` (UTC-3).
 
 ## Primeiro uso (após provisionamento)
