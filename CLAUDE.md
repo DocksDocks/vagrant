@@ -7,10 +7,10 @@ This repository contains a single `Vagrantfile` that provisions a complete Debia
 ## Key Technical Details
 
 - **Base box:** `debian/testing64` (Debian Trixie)
-- **Hypervisor:** VirtualBox with VBoxSVGA graphics controller
+- **Hypervisor:** VirtualBox with VMSVGA graphics controller (the correct one for Linux guests; VBoxSVGA is for Windows)
 - **Desktop:** XFCE 4 with LightDM (autologin as `vagrant`, password: `docks`)
 - **Theme:** Arc-Dark + Papirus-Dark icons + Noto Sans font + DMZ-White cursor
-- **Graphics:** VirtualBox Guest Additions built from ISO, vmwgfx blacklisted to avoid conflict with vboxvideo
+- **Graphics:** VirtualBox Guest Additions built from ISO. VMSVGA uses the mainline `vmwgfx` kernel driver (no blacklisting needed). GA provides clipboard, shared folders, and auto-resize.
 - **Compositor:** xfwm4 compositor is **disabled** (`use_compositing=false`, `vblank_mode=off`) — required for VirtualBox compatibility to prevent black screen after login
 - **Shell provisioning:** Uses `set -euo pipefail`, so any unhandled error aborts the entire provisioning. Commands that may fail should use `|| true`.
 
@@ -60,7 +60,8 @@ Note: The first `vagrant up` takes several minutes (package downloads). Subseque
 
 ## Common Issues
 
-- **Black screen after login:** Caused by xfwm4 compositor + VirtualBox VBoxSVGA. Fix: ensure `use_compositing=false` in xfwm4.xml
+- **Black screen after login:** Caused by xfwm4 compositor + VirtualBox virtual GPU. Fix: ensure `use_compositing=false` and `vblank_mode=off` in xfwm4.xml
+- **Black screen from boot (no greeter):** Wrong graphics controller. Linux guests MUST use VMSVGA (not VBoxSVGA). VBoxSVGA needs vboxvideo driver which may not load; VMSVGA uses vmwgfx (mainline kernel) which works immediately.
 - **Autologin not working:** Check that `autologin-session` matches the actual `.desktop` file in `/usr/share/xsessions/`. Session name detection is automatic.
 - **Guest Additions warning:** "kernel modules were not reloaded" during provisioning is expected — the new kernel boots after reboot and GA works correctly then.
 - **Provisioning aborts early:** Check for missing `|| true` on commands that can fail (gsettings, dconf, curl). The script uses `set -euo pipefail`.
