@@ -181,7 +181,7 @@ VBOX
 [Desktop Entry]
 Type=Application
 Name=VBox Auto Resize
-Exec=sh -c "sleep 5 && while true; do xrandr --output Virtual-1 --preferred 2>/dev/null; sleep 3; done"
+Exec=sh -c "sleep 3 && xrandr --output Virtual-1 --preferred 2>/dev/null; xev -root -event randr | while read -r line; do case $line in *ScreenChangeNotify*) sleep 0.3; xrandr --output Virtual-1 --preferred 2>/dev/null;; esac; done"
 Hidden=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
