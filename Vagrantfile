@@ -172,7 +172,7 @@ APTCONF
 [Desktop Entry]
 Type=Application
 Name=VBoxClient All Services
-Exec=sh -c "sleep 3 && VBoxClient-all && VBoxClient --vmsvga"
+Exec=sh -c "sleep 3 && VBoxClient-all"
 Hidden=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
@@ -181,7 +181,7 @@ VBOX
 [Desktop Entry]
 Type=Application
 Name=VBox Auto Resize
-Exec=sh -c "sleep 5 && xrandr --output Virtual-1 --auto 2>/dev/null || xrandr --output Virtual1 --auto 2>/dev/null || xrandr --output VGA-1 --auto 2>/dev/null || true"
+Exec=sh -c "sleep 3 && xrandr --output Virtual-1 --preferred 2>/dev/null; xev -root -event randr | while read -r line; do case $line in *ScreenChangeNotify*) sleep 0.3; xrandr --output Virtual-1 --preferred 2>/dev/null;; esac; done"
 Hidden=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
