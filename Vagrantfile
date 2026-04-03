@@ -405,20 +405,28 @@ MIMEAPPS
     su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view color-scheme "solarized-dark"'
 
     # ── Tilix: configuração do terminal ──────────────────────
-    glib-compile-schemas /usr/share/glib-2.0/schemas/ 2>/dev/null || true
-    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix theme-variant "dark"' || true
-    su - vagrant -c 'dbus-launch gsettings set com.gexperts.Tilix enable-wide-handle true' || true
-    TILIX_PROF="com.gexperts.Tilix.Profile:/com/gexperts/Tilix/profiles/default/"
-    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF use-theme-colors false"
-    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF background-color \"'#1E1E1E'\""
-    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF foreground-color \"'#A7A7A7'\""
-    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF background-transparency-percent 4"
-    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF bold-color-set false"
-    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF cursor-colors-set false"
-    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF highlight-colors-set false"
-    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF badge-color-set false"
-    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF visible-name 'Default'"
-    su - vagrant -c "dbus-launch gsettings set $TILIX_PROF palette \"['#1E1E1E', '#CF6A4C', '#8F9D6A', '#F9EE98', '#7587A6', '#9B859D', '#AFC4DB', '#A7A7A7', '#5F5A60', '#CF6A4C', '#8F9D6A', '#F9EE98', '#7587A6', '#9B859D', '#AFC4DB', '#FFFFFF']\""
+    # Uses dconf directly instead of gsettings to avoid schema compilation issues.
+    # Tilix identifies profiles by UUID — we set a fixed UUID as the default profile.
+    TILIX_UUID="2b7c4080-0ddd-46c5-8f23-563fd3ba789d"
+    su - vagrant -c "dbus-launch dconf load /com/gexperts/Tilix/ <<TILIXCONF
+[/]
+theme-variant='dark'
+enable-wide-handle=true
+default-profile='${TILIX_UUID}'
+profile-list=['${TILIX_UUID}']
+
+[profiles/${TILIX_UUID}]
+use-theme-colors=false
+background-color='#1E1E1E'
+foreground-color='#A7A7A7'
+background-transparency-percent=4
+bold-color-set=false
+cursor-colors-set=false
+highlight-colors-set=false
+badge-color-set=false
+visible-name='Default'
+palette=['#1E1E1E','#CF6A4C','#8F9D6A','#F9EE98','#7587A6','#9B859D','#AFC4DB','#A7A7A7','#5F5A60','#CF6A4C','#8F9D6A','#F9EE98','#7587A6','#9B859D','#AFC4DB','#FFFFFF']
+TILIXCONF"
 
     # ── Node.js LTS (via nvm) + pnpm + Claude Code ──────────
     echo ">> Instalando nvm + node LTS + pnpm + claude code..."
