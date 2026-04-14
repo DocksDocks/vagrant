@@ -166,17 +166,73 @@ APTCONF
     # Ensure GA services (including VBoxDRMClient for VMSVGA resize) are enabled
     systemctl enable vboxadd-service 2>/dev/null || true
 
-    # ── VBoxClient-all autostart (clipboard + auto-resize + drag-and-drop) ──
-    mkdir -p /home/vagrant/.config/autostart
-    cat > /home/vagrant/.config/autostart/vboxclient-all.desktop << 'VBOX'
+    # ── VBoxClient: supervise --clipboard and --draganddrop via systemd --user ──
+    # Upstream bug: these helpers terminate silently on X events (resize, VT
+    # switch, long uptime). See VirtualBox tickets #5266/#6150 and
+    # NixOS/nixpkgs#65542. systemd --user with Restart=always respawns them
+    # transparently; idle CPU is ~0% (--nodaemon blocks on HGCM, no polling).
+    # See plans/0001-clipboard-supervisor.md for rationale and alternatives.
+    mkdir -p /home/vagrant/.config/autostart \
+             /home/vagrant/.config/systemd/user \
+             /home/vagrant/.config/systemd/user/default.target.wants
+
+    # Remove the pre-fix VBoxClient-all autostart (superseded by supervised units)
+    rm -f /home/vagrant/.config/autostart/vboxclient-all.desktop
+
+    cat > /home/vagrant/.config/systemd/user/vbox-clipboard.service << 'UNIT'
+[Unit]
+Description=VirtualBox shared clipboard helper (supervised)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/VBoxClient --clipboard --nodaemon
+Restart=always
+RestartSec=2s
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=default.target
+UNIT
+
+    cat > /home/vagrant/.config/systemd/user/vbox-draganddrop.service << 'UNIT'
+[Unit]
+Description=VirtualBox drag-and-drop helper (supervised)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/VBoxClient --draganddrop --nodaemon
+Restart=always
+RestartSec=2s
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=default.target
+UNIT
+
+    # Enable the user units by creating the WantedBy symlinks directly
+    # (avoids needing XDG_RUNTIME_DIR / an active user manager during provision)
+    ln -sf ../vbox-clipboard.service \
+      /home/vagrant/.config/systemd/user/default.target.wants/vbox-clipboard.service
+    ln -sf ../vbox-draganddrop.service \
+      /home/vagrant/.config/systemd/user/default.target.wants/vbox-draganddrop.service
+
+    # XDG autostart: import DISPLAY/XAUTHORITY into the user manager, ensure
+    # the supervised services are running for this session, and launch the
+    # one-shot helpers that don't need supervision.
+    cat > /home/vagrant/.config/autostart/vboxclient-session.desktop << 'VBOX'
 [Desktop Entry]
 Type=Application
-Name=VBoxClient All Services
-Exec=sh -c "sleep 3 && VBoxClient-all"
+Name=VBoxClient Session Bootstrap
+Exec=sh -c "sleep 3 && systemctl --user import-environment DISPLAY XAUTHORITY && systemctl --user restart vbox-clipboard.service vbox-draganddrop.service && VBoxClient --vmsvga 2>/dev/null; VBoxClient --seamless 2>/dev/null; VBoxClient --display 2>/dev/null; true"
 Hidden=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
 VBOX
+
     cat > /home/vagrant/.config/autostart/vbox-autoresize.desktop << 'AUTORESIZE'
 [Desktop Entry]
 Type=Application
@@ -186,7 +242,7 @@ Hidden=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
 AUTORESIZE
-    chown -R vagrant:vagrant /home/vagrant/.config/autostart
+    chown -R vagrant:vagrant /home/vagrant/.config/autostart /home/vagrant/.config/systemd
 
     # ── GTK3 headerbar button fix (Arc-Dark CSD styling) ──
     mkdir -p /home/vagrant/.config/gtk-3.0
