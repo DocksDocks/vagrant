@@ -453,16 +453,17 @@ TILIXCONF" || true
     su - vagrant -c 'grep -q "direnv hook" ~/.bashrc 2>/dev/null || echo "eval \"\$(direnv hook bash)\"" >> ~/.bashrc'
     su - vagrant -c 'grep -q "XDG_RUNTIME_DIR" ~/.bashrc 2>/dev/null || echo "export XDG_RUNTIME_DIR=/run/user/\$(id -u)" >> ~/.bashrc'
 
-    # ── SSOT .claude sync (from DocksDocks/public) ─────────
-    if [ ! -f /var/lib/vagrant-claude-synced ]; then
-      echo ">> Syncing .claude config from SSOT..."
-      su - vagrant -c 'git clone --depth 1 https://github.com/DocksDocks/public.git /tmp/public'
-      su - vagrant -c 'rsync -a /tmp/public/ssot/.claude/ /home/vagrant/.claude/'
-      rm -rf /tmp/public
-      touch /var/lib/vagrant-claude-synced
-    else
-      echo ">> SSOT .claude already synced, skipping."
-    fi
+    # ── SSOT .claude sync (via sync.sh from DocksDocks/public) ─────────
+    echo ">> Syncing .claude config from SSOT via sync.sh..."
+    su - vagrant -c '
+      set -e
+      rm -rf /tmp/docksdocks-public
+      git clone --depth 1 https://github.com/DocksDocks/public.git /tmp/docksdocks-public
+      cd /tmp/docksdocks-public
+      bash sync.sh
+      cd /
+      rm -rf /tmp/docksdocks-public
+    '
 
     # ── Git config ──────────────────────────────────────────
     su - vagrant -c 'git config --global init.defaultBranch main'
