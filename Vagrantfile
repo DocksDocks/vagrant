@@ -105,6 +105,10 @@ Vagrant.configure("2") do |config|
       "SCRIPTS_REPO"        => SCRIPTS_REPO,
       "SCRIPTS_REF"         => SCRIPTS_REF,
       "VAGRANT_SCRIPTS_DIR" => LOCAL_DIR,
+      # Forward FORCE_REINSTALL so `FORCE_REINSTALL=1 vagrant provision`
+      # bypasses the idempotency guards in 30-guest-additions.sh and
+      # 70-nodejs-claude.sh.
+      "FORCE_REINSTALL"     => ENV["FORCE_REINSTALL"],
     }.compact
 
     if LOCAL_DIR

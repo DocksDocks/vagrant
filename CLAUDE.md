@@ -58,6 +58,16 @@ vagrant provision
 
 Note: The first `vagrant up` takes several minutes (package downloads). Subsequent `vagrant up` after `vagrant halt` boots in seconds without re-provisioning.
 
+### Re-provisioning is idempotent
+
+`scripts/30-guest-additions.sh` and `scripts/70-nodejs-claude.sh` detect existing installs and skip them on re-provision — those are the two scripts with real network/build cost. apt install is already idempotent in practice (already-installed packages take milliseconds).
+
+To force a full re-install of Guest Additions, nvm, Node, pnpm, and Claude Code:
+```bash
+FORCE_REINSTALL=1 vagrant provision
+```
+Use this when upgrading tool versions or recovering from a broken install.
+
 ## Common Issues
 
 - **Black screen after login:** Caused by xfwm4 compositor + VirtualBox virtual GPU. Fix: ensure `use_compositing=false` and `vblank_mode=off` in xfwm4.xml
@@ -66,4 +76,4 @@ Note: The first `vagrant up` takes several minutes (package downloads). Subseque
 - **Auto-resize not working:** VBox GA 7.2.6 kernel modules fail to build on kernel 6.19+ (`__flush_tlb_all` namespace error). The in-kernel `vboxguest` lacks HGCM ioctls needed by `VBoxClient --vmsvga-session`. Workaround: an `xev`-based autostart script monitors RandR events and applies `xrandr --preferred`. When Oracle fixes GA for 6.19 ([VBox #467](https://github.com/VirtualBox/virtualbox/issues/467)), the xev workaround can be removed and native auto-resize will work.
 - **Guest Additions warning:** "kernel modules were not reloaded" during provisioning is expected on kernel 6.19+ — GA 7.2.6 modules fail to build due to `__flush_tlb_all` namespace change. The in-kernel vbox modules provide basic functionality. Auto-resize uses the xev workaround (see above).
 - **Provisioning aborts early:** Check for missing `|| true` on commands that can fail (gsettings, dconf, curl). The script uses `set -euo pipefail`.
-- **Paste silently fails in the Claude Code OAuth login prompt:** The `Paste code here if prompted >` input drops pasted content because Claude Code mishandles bracketed-paste markers (`\e[200~`…`\e[201~`) on that screen — upstream bug [anthropics/claude-code#47670](https://github.com/anthropics/claude-code/issues/47670). Normal paste (**Ctrl+Shift+V** in Tilix, **Ctrl+V** elsewhere, including the main Claude Code chat input *after* login) is **unchanged and still works** — prefer it everywhere it works. As an additive fallback, **Ctrl+Alt+V** runs `/usr/local/bin/type-clipboard` (xdotool + xclip) which *types* the clipboard as synthetic keystrokes, bypassing bracketed paste so the OAuth prompt receives the code. Because it simulates typing, it's slower than real paste and follows the current keyboard layout — use it only when normal paste fails. Remove the helper and the `<Primary><Alt>v` xfconf binding once #47670 ships.
+- **Claude Code `/login` OAuth prompt doesn't accept the pasted code:** Upstream Claude Code bugs — the OAuth `Paste code here` input is broken independent of the terminal. Tracked as [anthropics/claude-code#47669](https://github.com/anthropics/claude-code/issues/47669) (input frozen / paste ignored, affects 2.1.105) and [anthropics/claude-code#47670](https://github.com/anthropics/claude-code/issues/47670) (bracketed-paste mishandled). Nothing we do at the terminal, VM, or desktop-environment layer can fix this — pastes don't even reach the input. Until Anthropic ships a fix, authenticate by setting `ANTHROPIC_API_KEY` (console.anthropic.com) or by copying an existing `~/.claude.json` + `~/.claude/` from another machine where you've already logged in. See [Claude Code auth docs](https://code.claude.com/docs/en/authentication).

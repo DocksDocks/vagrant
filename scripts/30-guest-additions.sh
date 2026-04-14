@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
 # 30-guest-additions.sh — install VirtualBox Guest Additions from ISO.
+#
+# Idempotency: on re-provision, skip the ISO download + module rebuild if GA
+# userland (VBoxClient) is already installed, unless FORCE_REINSTALL=1 is set.
+# The kernel module build on 6.19+ fails anyway (__flush_tlb_all namespace
+# change) and the in-kernel vboxguest covers basic functionality, so the
+# expensive part here is the ISO download (~80 MB) and the always-failing
+# module compile — both pure waste on re-provision.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
+
+if [[ "${FORCE_REINSTALL:-0}" != "1" ]] && command -v VBoxClient >/dev/null 2>&1; then
+  echo ">> VirtualBox Guest Additions already installed — skipping (set FORCE_REINSTALL=1 to redo)."
+  systemctl enable vboxadd-service 2>/dev/null || true
+  exit 0
+fi
 
 # ── VirtualBox Guest Additions (clipboard + auto-resize) ──
 echo ">> Instalando VirtualBox Guest Additions..."
