@@ -8,8 +8,9 @@ export DEBIAN_FRONTEND=noninteractive
 
 fetch_asset() {
   local rel="$1" dest="$2"
-  if [[ -n "${VAGRANT_SCRIPTS_DIR:-}" && -f "${VAGRANT_SCRIPTS_DIR}/../assets/${rel}" ]]; then
-    install -D -m 0644 "${VAGRANT_SCRIPTS_DIR}/../assets/${rel}" "$dest"
+  # Local-dev mode: the repo is mounted at /vagrant on the guest (default shared folder).
+  if [[ -n "${VAGRANT_SCRIPTS_DIR:-}" && -f "/vagrant/assets/${rel}" ]]; then
+    install -D -m 0644 "/vagrant/assets/${rel}" "$dest"
   else
     install -d "$(dirname "$dest")"
     curl -fsSL --retry 4 --retry-delay 2 \

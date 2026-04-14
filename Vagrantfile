@@ -115,6 +115,12 @@ Vagrant.configure("2") do |config|
       url = "https://raw.githubusercontent.com/#{SCRIPTS_REPO}/#{SCRIPTS_REF}/scripts/#{name}.sh"
       config.vm.provision name, type: "shell", env: env, inline: <<~SH
         set -euo pipefail
+        # Debian minimal ships without curl; bootstrap it on first use.
+        if ! command -v curl >/dev/null 2>&1; then
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y -qq curl ca-certificates
+        fi
         curl -fsSL --retry 4 --retry-delay 2 "#{url}" -o /tmp/#{name}.sh
         bash /tmp/#{name}.sh
       SH
