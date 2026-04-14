@@ -6,10 +6,11 @@ export DEBIAN_FRONTEND=noninteractive
 echo ">> Syncing .claude config from SSOT via sync.sh..."
 su - vagrant -c '
   set -e
-  rm -rf /tmp/docksdocks-public
-  git clone --depth 1 https://github.com/DocksDocks/public.git /tmp/docksdocks-public
-  cd /tmp/docksdocks-public
+  WORKDIR="$HOME/docksdocks-public"
+  rm -rf "$WORKDIR"
+  git clone --depth 1 https://github.com/DocksDocks/public.git "$WORKDIR"
+  cd "$WORKDIR"
   bash sync.sh
   cd /
-  rm -rf /tmp/docksdocks-public
+  rm -rf "$WORKDIR"
 '
