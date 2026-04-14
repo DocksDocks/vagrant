@@ -50,6 +50,27 @@ fetch_asset xfce4-panel.xml /etc/xdg/xfce4/panel/default.xml
 cp /etc/xdg/xfce4/panel/default.xml \
    /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
 
+# ── Disable screen lock + idle blank + DPMS ─────────────
+# VM autologs in as `vagrant`; locking only breaks VBoxClient --clipboard
+# (upstream Oracle bugs #5266 / #19234, unfixed) and adds no real security.
+# Re-enable via XFCE Settings → Power Manager if you need it, and the
+# vbox-clipboard-unlock-watchdog user unit will kick the helper on unlock.
+fetch_asset xfce4-power-manager.xml \
+  /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-power-manager.xml
+
+# User-level autostart override always wins over /etc/xdg/autostart and is
+# apt-upgrade-safe (we don't overwrite the light-locker package's file).
+mkdir -p /home/vagrant/.config/autostart
+cat > /home/vagrant/.config/autostart/light-locker.desktop <<'LL'
+[Desktop Entry]
+Type=Application
+Name=Light Locker (disabled)
+Exec=/bin/true
+Hidden=true
+NoDisplay=true
+X-GNOME-Autostart-enabled=false
+LL
+
 # ── Docklike: apps fixos (Chrome, Thunar, Terminal, Mousepad) ──
 fetch_asset docklike.rc /etc/xdg/xfce4/panel/docklike.rc
 # Copia com ID do plugin para cobertura completa

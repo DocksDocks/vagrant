@@ -1,0 +1,14 @@
+[Unit]
+Description=VBoxClient clipboard unlock watchdog (D-Bus ScreenSaver listener)
+PartOf=graphical-session.target
+After=graphical-session.target vbox-clipboard.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/vbox-clipboard-unlock-watchdog
+Restart=always
+RestartSec=5s
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=default.target
