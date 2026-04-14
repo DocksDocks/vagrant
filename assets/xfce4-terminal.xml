@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-terminal" version="1.0">
+  <property name="misc-default-geometry" type="string" value="120x35"/>
+  <property name="font-name" type="string" value="Noto Sans Mono 11"/>
+  <property name="font-use-system" type="bool" value="false"/>
+  <property name="color-background" type="string" value="#2b2b2b"/>
+  <property name="color-foreground" type="string" value="#d3dae3"/>
+  <property name="color-use-theme" type="bool" value="false"/>
+  <property name="scrolling-unlimited" type="bool" value="true"/>
+</channel>
