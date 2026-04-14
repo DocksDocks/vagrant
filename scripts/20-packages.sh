@@ -14,7 +14,7 @@ apt-get install -y -qq \
   xfce4-notifyd xfce4-screenshooter \
   xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-taskmanager mousepad \
   lightdm lightdm-gtk-greeter \
-  dbus-x11 xdg-utils xclip xdotool libwayland-client0 \
+  dbus-x11 xdg-utils xclip libwayland-client0 \
   pulseaudio alsa-utils \
   fonts-noto-color-emoji \
   arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
