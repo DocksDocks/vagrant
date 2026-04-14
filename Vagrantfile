@@ -115,6 +115,9 @@ Vagrant.configure("2") do |config|
       url = "https://raw.githubusercontent.com/#{SCRIPTS_REPO}/#{SCRIPTS_REF}/scripts/#{name}.sh"
       config.vm.provision name, type: "shell", env: env, inline: <<~SH
         set -euo pipefail
+        # debian/testing64 ships /tmp without sticky world-write; restore it so
+        # the vagrant user can create files/sockets (dbus-launch, git clone, ...).
+        chmod 1777 /tmp
         # Debian minimal ships without curl; bootstrap it on first use.
         if ! command -v curl >/dev/null 2>&1; then
           export DEBIAN_FRONTEND=noninteractive

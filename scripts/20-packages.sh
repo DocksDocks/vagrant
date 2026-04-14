@@ -23,7 +23,9 @@ apt-get install -y -qq \
 
 # ── Composer ────────────────────────────────────────────
 echo ">> Instalando composer..."
-curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+curl -fsSL --retry 4 --retry-delay 2 https://getcomposer.org/installer -o /tmp/composer-installer.php
+php /tmp/composer-installer.php --install-dir=/usr/local/bin --filename=composer
+rm -f /tmp/composer-installer.php
 
 # ── Docker (grupo) ──────────────────────────────────────
 usermod -aG docker vagrant
