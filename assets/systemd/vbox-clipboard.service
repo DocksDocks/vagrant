@@ -1,0 +1,14 @@
+[Unit]
+Description=VirtualBox shared clipboard helper (supervised)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/VBoxClient --clipboard --nodaemon
+Restart=always
+RestartSec=2s
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=default.target

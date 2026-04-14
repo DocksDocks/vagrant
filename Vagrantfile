@@ -50,6 +50,30 @@ host_cpus = detect_host_cpus
 vm_memory = [[host_ram / 4, 2048].max, 8192].min
 vm_cpus   = [[host_cpus / 2, 1].max, 4].min
 
+# ── Provisioning source config ──────────────────────────
+# Scripts live in this repo under scripts/ and assets/. At provision time
+# the Vagrantfile fetches them from raw.githubusercontent.com at $SCRIPTS_REF
+# (overridable via VAGRANT_SCRIPTS_REF). For local development, set
+# VAGRANT_SCRIPTS_DIR=./scripts to use on-disk files without pushing.
+# See plans/0002-split-vagrantfile.md for the design rationale.
+SCRIPTS_REPO = "docksdocks/vagrant"
+SCRIPTS_REF  = ENV.fetch("VAGRANT_SCRIPTS_REF", "main")
+LOCAL_DIR    = ENV["VAGRANT_SCRIPTS_DIR"]
+
+SCRIPTS = %w[
+  10-apt-repos
+  20-packages
+  30-guest-additions
+  40-xfce-base
+  41-xfce-theme
+  50-vboxclient-supervisor
+  51-vbox-autoresize
+  60-apps-tilix-mousepad
+  70-nodejs-claude
+  80-git-ssh-lazygit
+  90-claude-config-sync
+]
+
 Vagrant.configure("2") do |config|
   config.vm.box = "debian/testing64"
   config.vm.hostname = "dev-box"
@@ -75,458 +99,32 @@ Vagrant.configure("2") do |config|
     vb.customize ["modifyvm", :id, "--audio-in", "off"]
   end
 
-  # ── Provisionamento ──────────────────────────────────
-  config.vm.provision "shell", inline: <<-'SHELL'
+  # ── Provisionamento: um shell provisioner por concern ──
+  SCRIPTS.each do |name|
+    env = {
+      "SCRIPTS_REPO"        => SCRIPTS_REPO,
+      "SCRIPTS_REF"         => SCRIPTS_REF,
+      "VAGRANT_SCRIPTS_DIR" => LOCAL_DIR,
+    }.compact
+
+    if LOCAL_DIR
+      config.vm.provision name, type: "shell",
+                                path: "#{LOCAL_DIR}/#{name}.sh",
+                                env: env
+    else
+      url = "https://raw.githubusercontent.com/#{SCRIPTS_REPO}/#{SCRIPTS_REF}/scripts/#{name}.sh"
+      config.vm.provision name, type: "shell", env: env, inline: <<~SH
+        set -euo pipefail
+        curl -fsSL --retry 4 --retry-delay 2 "#{url}" -o /tmp/#{name}.sh
+        bash /tmp/#{name}.sh
+      SH
+    end
+  end
+
+  # ── Finalize: resumo + reboot no primeiro provisionamento ──
+  config.vm.provision "99-finalize", type: "shell", inline: <<-'SHELL'
     set -euo pipefail
-    export DEBIAN_FRONTEND=noninteractive
 
-    # ── Força dpkg não-interativo ───────────────────────────
-    cat > /etc/apt/apt.conf.d/99force-conf <<'APTCONF'
-Dpkg::Options {
-  "--force-confdef";
-  "--force-confold";
-}
-APTCONF
-
-    echo "══════════════════════════════════════════"
-    echo "  Atualizando sistema base"
-    echo "══════════════════════════════════════════"
-
-    # ── Ferramentas essenciais (Debian minimal não inclui curl) ─
-    apt-get update -qq
-    apt-get upgrade -y -qq
-    apt-get install -y -qq curl ca-certificates gnupg
-    install -m 0755 -d /etc/apt/keyrings
-
-    # ── Timezone (sem depender de timedatectl/dbus) ─────────
-    ln -sf /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
-    echo "America/Sao_Paulo" > /etc/timezone
-
-    # ── Repos externos (Chrome + Docker + GitHub CLI) ───────
-    echo ">> Configurando repositórios externos..."
-
-    curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | \
-      gpg --batch --yes --dearmor -o /etc/apt/keyrings/google-chrome.gpg
-    echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main' \
-      > /etc/apt/sources.list.d/google-chrome.list
-
-    curl -fsSL https://download.docker.com/linux/debian/gpg | \
-      gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
-
-    ARCH=$(dpkg --print-architecture)
-    CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
-    # Docker pode não ter repo para trixie ainda — fallback para bookworm
-    if ! curl -fsSL "https://download.docker.com/linux/debian/dists/${CODENAME}/Release" &>/dev/null; then
-      CODENAME="bookworm"
-    fi
-    echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian ${CODENAME} stable" \
-      > /etc/apt/sources.list.d/docker.list
-
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
-      gpg --batch --yes --dearmor -o /etc/apt/keyrings/githubcli.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli.gpg] https://cli.github.com/packages stable main" \
-      > /etc/apt/sources.list.d/github-cli.list
-
-    # ── Único update com todos os repos prontos ─────────────
-    apt-get update -qq
-
-    # ── Instalação em lote ──────────────────────────────────
-    echo ">> Instalando todos os pacotes..."
-    apt-get install -y -qq \
-      git jq ripgrep build-essential tilix libharfbuzz-gobject0 wget unzip shellcheck rsync dconf-cli \
-      fd-find fzf bat htop tree direnv \
-      python3 python3-pip python3-venv \
-      php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \
-      xfce4 xfce4-terminal \
-      xfce4-notifyd xfce4-screenshooter \
-      xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-taskmanager mousepad \
-      lightdm lightdm-gtk-greeter \
-      dbus-x11 xdg-utils xclip libwayland-client0 \
-      pulseaudio alsa-utils \
-      fonts-noto-color-emoji \
-      arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
-      google-chrome-stable gh \
-      docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-    # ── VirtualBox Guest Additions (clipboard + auto-resize) ──
-    echo ">> Instalando VirtualBox Guest Additions..."
-    apt-get install -y -qq linux-headers-amd64 dkms
-    VBOX_VERSION=$(cat /home/vagrant/.vbox_version 2>/dev/null || VBoxControl --version 2>/dev/null | head -1 | sed 's/r.*//' || echo "7.2.6")
-    VBOX_ISO="/home/vagrant/VBoxGuestAdditions_${VBOX_VERSION}.iso"
-    if [ ! -f "$VBOX_ISO" ]; then
-      curl -fsSL -o "$VBOX_ISO" "https://download.virtualbox.org/virtualbox/${VBOX_VERSION}/VBoxGuestAdditions_${VBOX_VERSION}.iso" || true
-    fi
-    if [ -f "$VBOX_ISO" ]; then
-      mount -o loop "$VBOX_ISO" /mnt 2>/dev/null || true
-      /mnt/VBoxLinuxAdditions.run --nox11 || true
-      umount /mnt 2>/dev/null || true
-      rm -f "$VBOX_ISO"
-    fi
-    # Ensure GA services (including VBoxDRMClient for VMSVGA resize) are enabled
-    systemctl enable vboxadd-service 2>/dev/null || true
-
-    # ── VBoxClient: supervise --clipboard and --draganddrop via systemd --user ──
-    # Upstream bug: these helpers terminate silently on X events (resize, VT
-    # switch, long uptime). See VirtualBox tickets #5266/#6150 and
-    # NixOS/nixpkgs#65542. systemd --user with Restart=always respawns them
-    # transparently; idle CPU is ~0% (--nodaemon blocks on HGCM, no polling).
-    # See plans/0001-clipboard-supervisor.md for rationale and alternatives.
-    mkdir -p /home/vagrant/.config/autostart \
-             /home/vagrant/.config/systemd/user \
-             /home/vagrant/.config/systemd/user/default.target.wants
-
-    # Remove the pre-fix VBoxClient-all autostart (superseded by supervised units)
-    rm -f /home/vagrant/.config/autostart/vboxclient-all.desktop
-
-    cat > /home/vagrant/.config/systemd/user/vbox-clipboard.service << 'UNIT'
-[Unit]
-Description=VirtualBox shared clipboard helper (supervised)
-PartOf=graphical-session.target
-After=graphical-session.target
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/VBoxClient --clipboard --nodaemon
-Restart=always
-RestartSec=2s
-StartLimitIntervalSec=0
-
-[Install]
-WantedBy=default.target
-UNIT
-
-    cat > /home/vagrant/.config/systemd/user/vbox-draganddrop.service << 'UNIT'
-[Unit]
-Description=VirtualBox drag-and-drop helper (supervised)
-PartOf=graphical-session.target
-After=graphical-session.target
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/VBoxClient --draganddrop --nodaemon
-Restart=always
-RestartSec=2s
-StartLimitIntervalSec=0
-
-[Install]
-WantedBy=default.target
-UNIT
-
-    # Enable the user units by creating the WantedBy symlinks directly
-    # (avoids needing XDG_RUNTIME_DIR / an active user manager during provision)
-    ln -sf ../vbox-clipboard.service \
-      /home/vagrant/.config/systemd/user/default.target.wants/vbox-clipboard.service
-    ln -sf ../vbox-draganddrop.service \
-      /home/vagrant/.config/systemd/user/default.target.wants/vbox-draganddrop.service
-
-    # XDG autostart: import DISPLAY/XAUTHORITY into the user manager, ensure
-    # the supervised services are running for this session, and launch the
-    # one-shot helpers that don't need supervision.
-    cat > /home/vagrant/.config/autostart/vboxclient-session.desktop << 'VBOX'
-[Desktop Entry]
-Type=Application
-Name=VBoxClient Session Bootstrap
-Exec=sh -c "sleep 3 && systemctl --user import-environment DISPLAY XAUTHORITY && systemctl --user restart vbox-clipboard.service vbox-draganddrop.service && VBoxClient --vmsvga 2>/dev/null; VBoxClient --seamless 2>/dev/null; VBoxClient --display 2>/dev/null; true"
-Hidden=false
-NoDisplay=true
-X-GNOME-Autostart-enabled=true
-VBOX
-
-    cat > /home/vagrant/.config/autostart/vbox-autoresize.desktop << 'AUTORESIZE'
-[Desktop Entry]
-Type=Application
-Name=VBox Auto Resize
-Exec=sh -c "sleep 3 && xrandr --output Virtual-1 --preferred 2>/dev/null; xev -root -event randr | while read -r line; do case $line in *ScreenChangeNotify*) sleep 0.3; xrandr --output Virtual-1 --preferred 2>/dev/null;; esac; done"
-Hidden=false
-NoDisplay=true
-X-GNOME-Autostart-enabled=true
-AUTORESIZE
-    chown -R vagrant:vagrant /home/vagrant/.config/autostart /home/vagrant/.config/systemd
-
-    # ── GTK3 headerbar button fix (Arc-Dark CSD styling) ──
-    mkdir -p /home/vagrant/.config/gtk-3.0
-    cat > /home/vagrant/.config/gtk-3.0/gtk.css << 'GTKCSS'
-headerbar button:not(.titlebutton) {
-  background-image: image(alpha(currentColor, 0.12));
-  border-radius: 4px;
-}
-headerbar button:not(.titlebutton):hover {
-  background-image: image(alpha(currentColor, 0.22));
-}
-GTKCSS
-    chown -R vagrant:vagrant /home/vagrant/.config/gtk-3.0
-
-    # ── Composer ────────────────────────────────────────────
-    echo ">> Instalando composer..."
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-    # ── Docker (grupo) ──────────────────────────────────────
-    usermod -aG docker vagrant
-
-    # ── Senha do usuário vagrant ────────────────────────────
-    echo 'vagrant:docks' | chpasswd
-
-    # ── LightDM autologin ───────────────────────────────────
-    mkdir -p /etc/lightdm/lightdm.conf.d
-    # Detect actual XFCE session name (varies between Debian versions)
-    XFCE_SESSION="xfce"
-    [ -f /usr/share/xsessions/xfce.desktop ] || XFCE_SESSION="xfce4"
-    cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<LIGHTDM
-[Seat:*]
-autologin-guest=false
-autologin-user=vagrant
-autologin-user-timeout=0
-user-session=${XFCE_SESSION}
-autologin-session=${XFCE_SESSION}
-LIGHTDM
-
-    getent group autologin >/dev/null || groupadd autologin
-    usermod -aG autologin vagrant
-    systemctl set-default graphical.target
-
-    # LightDM greeter com Arc-Dark + Papirus (tela de login)
-    cat > /etc/lightdm/lightdm-gtk-greeter.conf <<'GREETER'
-[greeter]
-theme-name=Arc-Dark
-icon-theme-name=Papirus-Dark
-font-name=Noto Sans 10
-cursor-theme-name=DMZ-White
-cursor-theme-size=24
-background=#2b2b2b
-GREETER
-
-    # ── Tema visual (Arc-Dark + Papirus + Noto Sans) ────────
-    mkdir -p /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml
-
-    cat > /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'XSETTINGS'
-<?xml version="1.0" encoding="UTF-8"?>
-<channel name="xsettings" version="1.0">
-  <property name="Net" type="empty">
-    <property name="ThemeName" type="string" value="Arc-Dark"/>
-    <property name="IconThemeName" type="string" value="Papirus-Dark"/>
-  </property>
-  <property name="Gtk" type="empty">
-    <property name="FontName" type="string" value="Noto Sans 10"/>
-    <property name="CursorThemeName" type="string" value="DMZ-White"/>
-    <property name="CursorThemeSize" type="int" value="24"/>
-  </property>
-</channel>
-XSETTINGS
-
-    cat > /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml <<'XFWM4'
-<?xml version="1.0" encoding="UTF-8"?>
-<channel name="xfwm4" version="1.0">
-  <property name="general" type="empty">
-    <property name="theme" type="string" value="Arc-Dark"/>
-    <property name="title_font" type="string" value="Noto Sans Bold 10"/>
-    <property name="use_compositing" type="bool" value="false"/>
-    <property name="vblank_mode" type="string" value="off"/>
-  </property>
-</channel>
-XFWM4
-
-    cat > /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-terminal.xml <<'XFCETERM'
-<?xml version="1.0" encoding="UTF-8"?>
-<channel name="xfce4-terminal" version="1.0">
-  <property name="misc-default-geometry" type="string" value="120x35"/>
-  <property name="font-name" type="string" value="Noto Sans Mono 11"/>
-  <property name="font-use-system" type="bool" value="false"/>
-  <property name="color-background" type="string" value="#2b2b2b"/>
-  <property name="color-foreground" type="string" value="#d3dae3"/>
-  <property name="color-use-theme" type="bool" value="false"/>
-  <property name="scrolling-unlimited" type="bool" value="true"/>
-</channel>
-XFCETERM
-
-    # ── Painel XFCE (layout Ubuntu-like: top bar + bottom dock) ──
-    # Escrito em /etc/xdg para ser usado como default no primeiro login
-    mkdir -p /etc/xdg/xfce4/xfconf/xfce-perchannel-xml
-
-    cat > /etc/xdg/xfce4/panel/default.xml <<'XFCEPANEL'
-<?xml version="1.0" encoding="UTF-8"?>
-<channel name="xfce4-panel" version="1.0">
-  <property name="configver" type="int" value="2"/>
-  <property name="panels" type="array">
-    <value type="int" value="1"/>
-    <value type="int" value="2"/>
-    <property name="panel-1" type="empty">
-      <property name="position" type="string" value="p=6;x=0;y=0"/>
-      <property name="position-locked" type="bool" value="true"/>
-      <property name="size" type="uint" value="28"/>
-      <property name="length" type="uint" value="100"/>
-      <property name="length-adjust" type="bool" value="false"/>
-      <property name="icon-size" type="uint" value="16"/>
-      <property name="plugin-ids" type="array">
-        <value type="int" value="1"/>
-        <value type="int" value="2"/>
-        <value type="int" value="3"/>
-        <value type="int" value="4"/>
-        <value type="int" value="5"/>
-      </property>
-    </property>
-    <property name="panel-2" type="empty">
-      <property name="position" type="string" value="p=12;x=0;y=0"/>
-      <property name="position-locked" type="bool" value="true"/>
-      <property name="size" type="uint" value="48"/>
-      <property name="length" type="uint" value="100"/>
-      <property name="length-adjust" type="bool" value="false"/>
-      <property name="icon-size" type="uint" value="32"/>
-      <property name="plugin-ids" type="array">
-        <value type="int" value="9"/>
-        <value type="int" value="10"/>
-        <value type="int" value="11"/>
-      </property>
-    </property>
-  </property>
-
-  <property name="plugins" type="empty">
-    <property name="plugin-1" type="string" value="whiskermenu"/>
-
-    <property name="plugin-2" type="string" value="separator">
-      <property name="expand" type="bool" value="true"/>
-      <property name="style" type="uint" value="0"/>
-    </property>
-
-    <property name="plugin-3" type="string" value="clock">
-      <property name="digital-format" type="string" value="%a %d %b  %H:%M"/>
-      <property name="mode" type="uint" value="2"/>
-    </property>
-
-    <property name="plugin-4" type="string" value="separator">
-      <property name="expand" type="bool" value="true"/>
-      <property name="style" type="uint" value="0"/>
-    </property>
-
-    <property name="plugin-5" type="string" value="systray">
-      <property name="square-icons" type="bool" value="true"/>
-    </property>
-
-    <!-- Panel 2: expanding separator (left) + docklike + expanding separator (right) -->
-    <property name="plugin-9" type="string" value="separator">
-      <property name="expand" type="bool" value="true"/>
-      <property name="style" type="uint" value="0"/>
-    </property>
-
-    <property name="plugin-10" type="string" value="docklike"/>
-
-    <property name="plugin-11" type="string" value="separator">
-      <property name="expand" type="bool" value="true"/>
-      <property name="style" type="uint" value="0"/>
-    </property>
-  </property>
-</channel>
-XFCEPANEL
-
-    # Copia para xfconf xdg path (onde xfconfd lê no primeiro login)
-    cp /etc/xdg/xfce4/panel/default.xml \
-       /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
-
-    # ── Docklike: apps fixos (Chrome, Thunar, Terminal, Mousepad) ──
-    mkdir -p /etc/xdg/xfce4/panel
-    cat > /etc/xdg/xfce4/panel/docklike.rc <<'DOCKLIKE'
-[user]
-pinned=/usr/share/applications/google-chrome.desktop;/usr/share/applications/thunar.desktop;/usr/share/applications/com.gexperts.Tilix.desktop;/usr/share/applications/org.xfce.mousepad.desktop
-DOCKLIKE
-    # Copia com ID do plugin para cobertura completa
-    cp /etc/xdg/xfce4/panel/docklike.rc /etc/xdg/xfce4/panel/docklike-10.rc
-
-    # ── Chrome como navegador padrão ────────────────────────
-    mkdir -p /home/vagrant/.config/xfce4/helpers
-    cat > /home/vagrant/.config/xfce4/helpers/google-chrome.desktop <<'CHROMEHELPER'
-[Desktop Entry]
-X-XFCE-Binaries=google-chrome-stable;google-chrome;
-X-XFCE-Category=WebBrowser
-X-XFCE-Commands=%B;%B;
-X-XFCE-CommandsWithParameter=%B "%s";%B "%s";
-Type=X-XFCE-Helper
-Name=Google Chrome
-Icon=google-chrome
-CHROMEHELPER
-
-    echo "WebBrowser=google-chrome" > /home/vagrant/.config/xfce4/helpers.rc
-
-    cat > /home/vagrant/.config/mimeapps.list <<'MIMEAPPS'
-[Default Applications]
-x-scheme-handler/http=google-chrome.desktop
-x-scheme-handler/https=google-chrome.desktop
-text/html=google-chrome.desktop
-MIMEAPPS
-
-    cp /usr/share/applications/google-chrome.desktop \
-       /usr/share/applications/exo-web-browser.desktop 2>/dev/null || true
-
-    chown -R vagrant:vagrant /home/vagrant/.config
-
-    # ── Mousepad: Solarized Dark + Line Numbers ─────────────
-    su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view show-line-numbers true' || true
-    su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view color-scheme "solarized-dark"' || true
-
-    # ── Tilix: configuração do terminal ──────────────────────
-    # Uses dconf directly instead of gsettings to avoid schema compilation issues.
-    # Tilix identifies profiles by UUID — we set a fixed UUID as the default profile.
-    TILIX_UUID="2b7c4080-0ddd-46c5-8f23-563fd3ba789d"
-    su - vagrant -c "dbus-launch dconf load /com/gexperts/Tilix/ <<TILIXCONF
-[/]
-theme-variant='dark'
-enable-wide-handle=true
-default-profile='${TILIX_UUID}'
-profile-list=['${TILIX_UUID}']
-
-[profiles/${TILIX_UUID}]
-use-theme-colors=false
-background-color='#1E1E1E'
-foreground-color='#A7A7A7'
-background-transparency-percent=4
-bold-color-set=false
-cursor-colors-set=false
-highlight-colors-set=false
-badge-color-set=false
-visible-name='Default'
-palette=['#1E1E1E','#CF6A4C','#8F9D6A','#F9EE98','#7587A6','#9B859D','#AFC4DB','#A7A7A7','#5F5A60','#CF6A4C','#8F9D6A','#F9EE98','#7587A6','#9B859D','#AFC4DB','#FFFFFF']
-TILIXCONF" || true
-
-    # ── Node.js LTS (via nvm) + pnpm + Claude Code ──────────
-    echo ">> Instalando nvm + node LTS + pnpm + claude code..."
-    su - vagrant -c 'curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash'
-    su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && npm install -g pnpm'
-    su - vagrant -c 'curl -fsSL https://claude.ai/install.sh | bash' || echo "⚠ Claude Code install falhou (pode ser falta de RAM). Tente instalar manualmente depois: curl -fsSL https://claude.ai/install.sh | bash"
-    su - vagrant -c 'grep -q "\.local/bin" ~/.bashrc 2>/dev/null || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
-
-    # ── Lazygit (terminal Git UI) ───────────────────────────
-    echo ">> Instalando lazygit..."
-    LAZYGIT_VERSION=$(curl -fsSL "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | jq -r '.tag_name' | sed 's/^v//')
-    curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" | \
-      tar -xz -C /usr/local/bin lazygit
-
-    # ── SSH Key + alias + ~/projects ────────────────────────
-    echo ">> Configurando SSH key, alias e diretório de projetos..."
-    su - vagrant -c 'mkdir -p ~/projects'
-    su - vagrant -c 'test -f ~/.ssh/id_ed25519 || ssh-keygen -t ed25519 -C "vagrant@dev-box" -f ~/.ssh/id_ed25519 -N ""'
-    su - vagrant -c 'grep -q "alias pf=" ~/.bashrc 2>/dev/null || echo "alias pf=\"cd ~/projects\"" >> ~/.bashrc'
-    su - vagrant -c 'grep -q "alias fd=" ~/.bashrc 2>/dev/null || echo "alias fd=fdfind" >> ~/.bashrc'
-    su - vagrant -c 'grep -q "alias bat=" ~/.bashrc 2>/dev/null || echo "alias bat=batcat" >> ~/.bashrc'
-    su - vagrant -c 'grep -q "direnv hook" ~/.bashrc 2>/dev/null || echo "eval \"\$(direnv hook bash)\"" >> ~/.bashrc'
-    su - vagrant -c 'grep -q "XDG_RUNTIME_DIR" ~/.bashrc 2>/dev/null || echo "export XDG_RUNTIME_DIR=/run/user/\$(id -u)" >> ~/.bashrc'
-
-    # ── SSOT .claude sync (via sync.sh from DocksDocks/public) ─────────
-    echo ">> Syncing .claude config from SSOT via sync.sh..."
-    su - vagrant -c '
-      set -e
-      rm -rf /tmp/docksdocks-public
-      git clone --depth 1 https://github.com/DocksDocks/public.git /tmp/docksdocks-public
-      cd /tmp/docksdocks-public
-      bash sync.sh
-      cd /
-      rm -rf /tmp/docksdocks-public
-    '
-
-    # ── Git config ──────────────────────────────────────────
-    su - vagrant -c 'git config --global init.defaultBranch main'
-    su - vagrant -c 'git config --global user.name "Your Name"'
-    su - vagrant -c 'git config --global user.email "you@example.com"'
-
-    # ── Resumo ──────────────────────────────────────────────
     echo ""
     echo "══════════════════════════════════════════"
     echo "  Provisionamento concluído!"

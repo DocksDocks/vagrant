@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=VBoxClient Session Bootstrap
+Exec=sh -c "sleep 3 && systemctl --user import-environment DISPLAY XAUTHORITY && systemctl --user restart vbox-clipboard.service vbox-draganddrop.service && VBoxClient --vmsvga 2>/dev/null; VBoxClient --seamless 2>/dev/null; VBoxClient --display 2>/dev/null; true"
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

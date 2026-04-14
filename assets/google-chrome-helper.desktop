@@ -1,0 +1,8 @@
+[Desktop Entry]
+X-XFCE-Binaries=google-chrome-stable;google-chrome;
+X-XFCE-Category=WebBrowser
+X-XFCE-Commands=%B;%B;
+X-XFCE-CommandsWithParameter=%B "%s";%B "%s";
+Type=X-XFCE-Helper
+Name=Google Chrome
+Icon=google-chrome

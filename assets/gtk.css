@@ -1,0 +1,7 @@
+headerbar button:not(.titlebutton) {
+  background-image: image(alpha(currentColor, 0.12));
+  border-radius: 4px;
+}
+headerbar button:not(.titlebutton):hover {
+  background-image: image(alpha(currentColor, 0.22));
+}
