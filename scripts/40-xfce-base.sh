@@ -87,4 +87,11 @@ fetch_asset mimeapps.list /home/vagrant/.config/mimeapps.list
 cp /usr/share/applications/google-chrome.desktop \
    /usr/share/applications/exo-web-browser.desktop 2>/dev/null || true
 
+# ── Chrome: disable hardware acceleration (VBox #15417) ─
+# VMSVGA has no real GPU. Chrome's GPU process probes it and deadlocks under
+# load (e.g. `next dev` + Chrome + Claude). Managed policy is the official
+# Google mechanism — survives apt upgrades, applies to every launch path.
+fetch_asset chrome-policy-no-gpu.json /etc/opt/chrome/policies/managed/no-gpu.json
+chmod 0644 /etc/opt/chrome/policies/managed/no-gpu.json
+
 chown -R vagrant:vagrant /home/vagrant/.config

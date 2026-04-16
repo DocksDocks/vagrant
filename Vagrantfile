@@ -88,7 +88,7 @@ Vagrant.configure("2") do |config|
     vb.gui    = true
     vb.memory = vm_memory
     vb.cpus   = vm_cpus
-    vb.customize ["modifyvm", :id, "--vram", "128"]
+    vb.customize ["modifyvm", :id, "--vram", "256"]
     vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
     vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
     vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
