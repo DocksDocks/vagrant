@@ -2,8 +2,8 @@
 # vi: set ft=ruby :
 
 # ── Detecção automática de recursos do host ─────────────
-# RAM: 25% do host, mín 2 GB, máx 8 GB
-# CPUs: 50% do host, mín 1, máx 4
+# RAM: host − 6 GB reservado, mín 2 GB, máx 16 GB
+# CPUs: host − 2 reservados, mín 1, máx 8
 require 'rbconfig'
 
 HOST_OS = RbConfig::CONFIG['host_os']
@@ -47,8 +47,8 @@ end
 host_ram  = detect_host_memory_mb
 host_cpus = detect_host_cpus
 
-vm_memory = [[host_ram / 4, 2048].max, 8192].min
-vm_cpus   = [[host_cpus / 2, 1].max, 4].min
+vm_memory = [[host_ram - 6144, 2048].max, 16384].min
+vm_cpus   = [[host_cpus - 2,   1   ].max, 8    ].min
 
 # ── Provisioning source config ──────────────────────────
 # Scripts live in this repo under scripts/ and assets/. At provision time

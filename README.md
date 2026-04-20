@@ -49,19 +49,21 @@ O Vagrantfile detecta automaticamente a RAM e os CPUs do host e aloca proporcion
 
 | Recurso | Regra                         | Mínimo | Máximo |
 |---------|-------------------------------|--------|--------|
-| RAM     | 25% do host                   | 2 GB   | 8 GB   |
-| CPUs    | 50% do host                   | 1      | 4      |
-| VRAM    | Fixo                          | 128 MB | 128 MB |
+| RAM     | host − 6 GB reservado         | 2 GB   | 16 GB  |
+| CPUs    | host − 2 reservados           | 1      | 8      |
+| VRAM    | Fixo                          | 256 MB | 256 MB |
 | Desktop | XFCE 4 (via LightDM com autologin) | —  | —      |
+
+A regra de reserva garante que o host sempre mantém ~6 GB de RAM e 2 CPUs livres para o sistema operacional e outros apps (ex.: Chrome no host), evitando congelamentos quando a VM está sob carga pesada.
 
 Exemplos de como fica na prática:
 
 | Host         | VM recebe         |
 |--------------|-------------------|
 | 8 GB / 4 cores  | 2 GB RAM / 2 CPUs |
-| 16 GB / 8 cores | 4 GB RAM / 4 CPUs |
-| 32 GB / 12 cores | 8 GB RAM / 4 CPUs |
-| 64 GB / 16 cores | 8 GB RAM / 4 CPUs |
+| 16 GB / 8 cores | 10 GB RAM / 6 CPUs |
+| 32 GB / 12 cores | 16 GB RAM / 8 CPUs |
+| 64 GB / 16 cores | 16 GB RAM / 8 CPUs |
 
 Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando `vm_memory` e `vm_cpus` diretamente no topo do `Vagrantfile`.
 
