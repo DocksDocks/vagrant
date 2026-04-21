@@ -61,9 +61,11 @@ Exemplos de como fica na prática:
 | Host         | VM recebe         |
 |--------------|-------------------|
 | 8 GB / 4 cores  | 2 GB RAM / 2 CPUs |
-| 16 GB / 8 cores | 10 GB RAM / 6 CPUs |
+| 16 GB / 8 cores | 6.5 GB RAM / 4 CPUs |
 | 32 GB / 12 cores | 16 GB RAM / 8 CPUs |
 | 64 GB / 16 cores | 16 GB RAM / 8 CPUs |
+
+O tier 16 GB / 8 CPUs é um caso especial — alocar 10 GB para a VM deixava o host sufocado (Chrome, Claude Code e outros apps competindo por ~6 GB). A carve-out reserva mais RAM/CPU pro host.
 
 Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando `vm_memory` e `vm_cpus` diretamente no topo do `Vagrantfile`.
 

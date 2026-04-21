@@ -4,6 +4,8 @@
 # ── Detecção automática de recursos do host ─────────────
 # RAM: host − 6 GB reservado, mín 2 GB, máx 16 GB
 # CPUs: host − 2 reservados, mín 1, máx 8
+# Exceção: hosts de 16 GB / 8 CPUs recebem 6.5 GB / 4 CPUs para evitar
+#          starvation do host (Chrome + apps + Claude Code).
 require 'rbconfig'
 
 HOST_OS = RbConfig::CONFIG['host_os']
@@ -47,8 +49,15 @@ end
 host_ram  = detect_host_memory_mb
 host_cpus = detect_host_cpus
 
-vm_memory = [[host_ram - 6144, 2048].max, 16384].min
-vm_cpus   = [[host_cpus - 2,   1   ].max, 8    ].min
+vm_memory, vm_cpus =
+  if host_ram >= 14000 && host_ram < 24000 && host_cpus >= 6 && host_cpus <= 9
+    [6656, 4]
+  else
+    [
+      [[host_ram - 6144, 2048].max, 16384].min,
+      [[host_cpus - 2,   1   ].max, 8    ].min,
+    ]
+  end
 
 # ── Provisioning source config ──────────────────────────
 # Scripts live in this repo under scripts/ and assets/. At provision time
