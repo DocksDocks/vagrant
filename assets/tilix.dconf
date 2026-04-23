@@ -6,6 +6,8 @@ profile-list=['2b7c4080-0ddd-46c5-8f23-563fd3ba789d']
 
 [profiles/2b7c4080-0ddd-46c5-8f23-563fd3ba789d]
 use-theme-colors=false
+use-system-font=false
+font='JetBrainsMono Nerd Font 11'
 background-color='#1E1E1E'
 foreground-color='#A7A7A7'
 background-transparency-percent=4
