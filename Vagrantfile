@@ -78,6 +78,7 @@ SCRIPTS = %w[
   50-vboxclient-supervisor
   51-vbox-autoresize
   60-apps-tilix-mousepad
+  65-superfile-fonts
   70-nodejs-claude
   80-git-ssh-lazygit
   90-claude-config-sync
@@ -165,6 +166,8 @@ Vagrant.configure("2") do |config|
     echo "  bat        : $(batcat --version | head -1)"
     echo "  fzf        : $(fzf --version)"
     echo "  htop       : $(htop --version | head -1)"
+    echo "  btop       : $(btop --version | head -1)"
+    echo "  spf        : $(spf --version 2>&1 | head -1)"
     echo "  lazygit    : $(lazygit --version | head -1)"
     su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && echo "  node       : $(node --version)" && echo "  npm        : $(npm --version)" && echo "  pnpm       : $(pnpm --version)"'
     echo "══════════════════════════════════════════"

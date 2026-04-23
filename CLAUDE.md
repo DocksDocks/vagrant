@@ -42,7 +42,7 @@ The Vagrantfile is self-contained (~515 lines) with this structure:
 
 ## Installed Tools
 
-Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions, Composer, Docker + Compose + Buildx, Node.js LTS (nvm), npm, pnpm, Claude Code, ShellCheck, jq, ripgrep, build-essential, Tilix, fzf, bat, fd-find, htop, tree, direnv, Lazygit, Google Chrome.
+Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions, Composer, Docker + Compose + Buildx, Node.js LTS (nvm), npm, pnpm, Claude Code, ShellCheck, jq, ripgrep, build-essential, Tilix, fzf, bat, fd-find, htop, btop, tree, direnv, Lazygit, superfile (spf), JetBrainsMono Nerd Font, Google Chrome.
 
 ## Testing Changes
 
@@ -60,9 +60,9 @@ Note: The first `vagrant up` takes several minutes (package downloads). Subseque
 
 ### Re-provisioning is idempotent
 
-`scripts/30-guest-additions.sh` and `scripts/70-nodejs-claude.sh` detect existing installs and skip them on re-provision — those are the two scripts with real network/build cost. apt install is already idempotent in practice (already-installed packages take milliseconds).
+`scripts/30-guest-additions.sh`, `scripts/65-superfile-fonts.sh`, and `scripts/70-nodejs-claude.sh` detect existing installs and skip them on re-provision — those are the scripts with real network/build cost. apt install is already idempotent in practice (already-installed packages take milliseconds).
 
-To force a full re-install of Guest Additions, nvm, Node, pnpm, and Claude Code:
+To force a full re-install of Guest Additions, the Nerd Font, superfile, nvm, Node, pnpm, and Claude Code:
 ```bash
 FORCE_REINSTALL=1 vagrant provision
 ```
