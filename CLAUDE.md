@@ -2,11 +2,11 @@
 
 ## Project Overview
 
-This repository contains a single `Vagrantfile` that provisions a complete Debian 13 (Trixie/testing) development VM with XFCE desktop, running on VirtualBox. Everything is configured via inline shell provisioning — there are no external scripts.
+This repository contains a single `Vagrantfile` that provisions a complete Debian 13 (Trixie, stable) development VM with XFCE desktop, running on VirtualBox. Everything is configured via inline shell provisioning — there are no external scripts.
 
 ## Key Technical Details
 
-- **Base box:** `debian/testing64` (Debian Trixie)
+- **Base box:** `debian/trixie64` (Debian 13, stable). We pin to Trixie rather than `debian/testing64` because `testing` now tracks Forky (Debian 14 dev), where packages like Tilix get auto-removed when transitive deps break.
 - **Hypervisor:** VirtualBox with VMSVGA graphics controller (the correct one for Linux guests; VBoxSVGA is for Windows)
 - **Desktop:** XFCE 4 with LightDM (autologin as `vagrant`, password: `docks`)
 - **Theme:** Arc-Dark + Papirus-Dark icons + Noto Sans font + DMZ-White cursor
