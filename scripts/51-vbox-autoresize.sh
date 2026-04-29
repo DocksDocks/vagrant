@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 51-vbox-autoresize.sh — xev-based auto-resize workaround while VBox GA 7.2.6
-# kernel modules fail to build on kernel 6.19+. See CLAUDE.md "Auto-resize not working".
+# fails to register VMSVGA auto-resize on Debian 13 Trixie
+# (VirtualBox/virtualbox#568). See CLAUDE.md "Auto-resize not working".
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
