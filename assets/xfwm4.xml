@@ -3,7 +3,7 @@
   <property name="general" type="empty">
     <property name="theme" type="string" value="Arc-Dark"/>
     <property name="title_font" type="string" value="Noto Sans Bold 10"/>
-    <property name="use_compositing" type="bool" value="false"/>
+    <property name="use_compositing" type="bool" value="true"/>
     <property name="vblank_mode" type="string" value="off"/>
   </property>
 </channel>
