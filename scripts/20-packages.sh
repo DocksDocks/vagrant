@@ -22,10 +22,24 @@ apt-get install -y -qq \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # ── Composer ────────────────────────────────────────────
+# Verify the installer's SHA-384 against the canonical hash published at
+# composer.github.io/installer.sig before running it as root. Without this,
+# a compromised CDN or MITM could ship arbitrary PHP that we'd execute with
+# full privileges. Pattern follows getcomposer.org's official docs.
 echo ">> Instalando composer..."
-curl -fsSL --retry 4 --retry-delay 2 https://getcomposer.org/installer -o /tmp/composer-installer.php
-php /tmp/composer-installer.php --install-dir=/usr/local/bin --filename=composer
-rm -f /tmp/composer-installer.php
+COMPOSER_INSTALLER=/tmp/composer-installer.php
+curl -fsSL --retry 4 --retry-delay 2 https://getcomposer.org/installer -o "$COMPOSER_INSTALLER"
+EXPECTED_SIG=$(curl -fsSL --retry 4 --retry-delay 2 https://composer.github.io/installer.sig)
+ACTUAL_SIG=$(sha384sum "$COMPOSER_INSTALLER" | awk '{print $1}')
+if [ "$EXPECTED_SIG" != "$ACTUAL_SIG" ]; then
+  echo "✗ Composer installer SHA-384 mismatch — refusing to run." >&2
+  echo "   expected: $EXPECTED_SIG" >&2
+  echo "   actual:   $ACTUAL_SIG" >&2
+  rm -f "$COMPOSER_INSTALLER"
+  exit 1
+fi
+php "$COMPOSER_INSTALLER" --install-dir=/usr/local/bin --filename=composer
+rm -f "$COMPOSER_INSTALLER"
 
 # ── Docker (grupo) ──────────────────────────────────────
 usermod -aG docker vagrant
