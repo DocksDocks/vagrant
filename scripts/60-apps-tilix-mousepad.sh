@@ -19,16 +19,37 @@ fetch_asset() {
   fi
 }
 
+# dbus-launch in `su - vagrant -c …` was racing PAM's session setup and dying
+# with `Failed to bind socket "/tmp/dbus-…": Permission denied`, which silently
+# dropped both the Mousepad gsettings calls and the Tilix dconf load (custom
+# palette + JetBrainsMono font). Switch to dbus-run-session: it's the modern,
+# scripted alternative — spawns a one-shot session bus, runs the command, tears
+# the daemon down on exit, and doesn't try to integrate with an X session.
+#
+# vagrant has no live login session at provision time, so /run/user/$UID
+# (where dbus-run-session prefers to drop its socket) doesn't exist. Create it
+# ourselves; if systemd-logind later tmpfs-mounts on top, our directory just
+# gets shadowed — harmless, since the dconf user db lives in $HOME.
+VAGRANT_UID=$(id -u vagrant)
+RUNTIME_DIR="/run/user/${VAGRANT_UID}"
+install -d -m 0700 -o vagrant -g vagrant "$RUNTIME_DIR"
+chmod 1777 /tmp  # defensive: dbus-daemon falls back to /tmp if RUNTIME_DIR fails
+
+DBUS_RUN="XDG_RUNTIME_DIR='$RUNTIME_DIR' dbus-run-session --"
+
 # ── Mousepad: Solarized Dark + Line Numbers ─────────────
-su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view show-line-numbers true' || true
-su - vagrant -c 'dbus-launch gsettings set org.xfce.mousepad.preferences.view color-scheme "solarized-dark"' || true
+su - vagrant -c "$DBUS_RUN gsettings set org.xfce.mousepad.preferences.view show-line-numbers true" || true
+su - vagrant -c "$DBUS_RUN gsettings set org.xfce.mousepad.preferences.view color-scheme solarized-dark" || true
 
 # ── Tilix: configuração do terminal ──────────────────────
 # Uses dconf directly instead of gsettings to avoid schema compilation issues.
 # Tilix identifies profiles by UUID — we set a fixed UUID as the default profile.
 fetch_asset tilix.dconf /tmp/tilix.dconf
 chown vagrant:vagrant /tmp/tilix.dconf
-su - vagrant -c 'dbus-launch dconf load /com/gexperts/Tilix/ < /tmp/tilix.dconf' || true
+# No `|| true` here: this is the custom palette + font. Silent failure means
+# the user opens Tilix, sees the default ugly theme, and assumes the box is
+# broken. Fail loud so a regression is visible in the provision log.
+su - vagrant -c "$DBUS_RUN dconf load /com/gexperts/Tilix/ < /tmp/tilix.dconf"
 rm -f /tmp/tilix.dconf
 
 # ── VTE shell integration (silences "Configuration Issue Detected" dialog) ──

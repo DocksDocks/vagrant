@@ -164,7 +164,7 @@ Vagrant.configure("2") do |config|
     echo "  shellcheck : $(shellcheck --version | grep version:)"
     echo "  jq         : $(jq --version)"
     echo "  ripgrep    : $(rg --version | head -1)"
-    echo "  tilix      : $(tilix --version 2>&1 | head -1)"
+    echo "  tilix      : tilix $(dpkg-query -f '${Version}' -W tilix 2>/dev/null || echo 'unknown')"
     echo "  bat        : $(batcat --version | head -1)"
     echo "  fzf        : $(fzf --version)"
     echo "  htop       : $(htop --version | head -1)"
