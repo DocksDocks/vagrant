@@ -81,6 +81,7 @@ SCRIPTS = %w[
   65-superfile-fonts
   70-nodejs-claude
   80-git-ssh-lazygit
+  85-secrets-env
   90-claude-config-sync
 ]
 
