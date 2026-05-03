@@ -32,3 +32,27 @@ fetch_asset xfwm4.xml           /home/vagrant/.config/xfce4/xfconf/xfce-perchann
 fetch_asset xfce4-terminal.xml  /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-terminal.xml
 
 chown -R vagrant:vagrant /home/vagrant/.config/xfce4
+
+# ── Tilix CloseDialog icon overlay ──────────────────────
+# Papirus-Dark inherits from `breeze-dark,hicolor` — NOT from Papirus — so
+# `utilities-terminal.svg` (which only Papirus ships) is unreachable. Tilix
+# logs `[warning] closedialog.d:88: Could not load icon for 'utilities-terminal'`
+# every time the "Close terminal?" dialog renders. Drop a user-XDG hicolor
+# overlay symlinking each size to the corresponding Papirus icon. Hicolor is
+# GTK's universal fallback theme so this resolves the icon for any active
+# theme. User-scoped (~/.local/share/icons), so `apt upgrade
+# papirus-icon-theme` and `papirus-icon-theme` package removal don't break it.
+ICON_DST=/home/vagrant/.local/share/icons/hicolor
+ICON_SRC=/usr/share/icons/Papirus
+for size in 16x16 22x22 24x24 32x32 48x48 64x64; do
+  mkdir -p "$ICON_DST/$size/apps"
+  ln -sfn "$ICON_SRC/$size/apps/utilities-terminal.svg" \
+          "$ICON_DST/$size/apps/utilities-terminal.svg"
+done
+mkdir -p "$ICON_DST/scalable/apps"
+ln -sfn "$ICON_SRC/64x64/apps/utilities-terminal.svg" \
+        "$ICON_DST/scalable/apps/utilities-terminal.svg"
+# index.theme is required for `gtk-update-icon-cache` to write a valid cache.
+[ -e "$ICON_DST/index.theme" ] || cp /usr/share/icons/hicolor/index.theme "$ICON_DST/"
+chown -R vagrant:vagrant /home/vagrant/.local
+runuser -u vagrant -- gtk-update-icon-cache -q -f "$ICON_DST" >/dev/null 2>&1 || true
