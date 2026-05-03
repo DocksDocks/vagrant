@@ -28,6 +28,16 @@ echo "════════════════════════�
 
 # ── Ferramentas essenciais (Debian minimal não inclui curl) ─
 apt-get update -qq
+
+# Pré-seed grub-pc: bento/debian-13 não popula install_devices, então
+# qualquer upgrade do grub-pc trava no prompt "must correct your GRUB
+# install devices" mesmo com DEBIAN_FRONTEND=noninteractive (debconf
+# não consegue auto-responder a um campo vazio). Detectamos o disco
+# de boot via lsblk e respondemos antes da pergunta acontecer.
+BOOT_DISK=$(lsblk -ndo NAME,TYPE | awk '$2=="disk"{print "/dev/"$1; exit}')
+echo "grub-pc grub-pc/install_devices multiselect ${BOOT_DISK}" | debconf-set-selections
+echo "grub-pc grub-pc/install_devices_empty boolean false" | debconf-set-selections
+
 apt-get upgrade -y -qq
 apt-get install -y -qq curl ca-certificates gnupg
 install -m 0755 -d /etc/apt/keyrings
