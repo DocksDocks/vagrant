@@ -19,6 +19,9 @@ fi
 echo ">> Instalando VirtualBox Guest Additions..."
 apt-get install -y -qq linux-headers-amd64 dkms
 VBOX_VERSION=$(cat /home/vagrant/.vbox_version 2>/dev/null || VBoxControl --version 2>/dev/null | head -1 | sed 's/r.*//' || echo "7.2.6")
+# `cat` succeeds with status 0 even when the file is empty, so the fallback
+# chain above doesn't catch an empty .vbox_version. Belt-and-braces default.
+VBOX_VERSION="${VBOX_VERSION:-7.2.6}"
 VBOX_ISO="/home/vagrant/VBoxGuestAdditions_${VBOX_VERSION}.iso"
 if [ ! -f "$VBOX_ISO" ]; then
   curl -fsSL -o "$VBOX_ISO" "https://download.virtualbox.org/virtualbox/${VBOX_VERSION}/VBoxGuestAdditions_${VBOX_VERSION}.iso" || true

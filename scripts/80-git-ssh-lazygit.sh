@@ -22,6 +22,8 @@ su - vagrant -c 'grep -q "direnv hook" ~/.bashrc 2>/dev/null || echo "eval \"\$(
 su - vagrant -c 'grep -q "XDG_RUNTIME_DIR" ~/.bashrc 2>/dev/null || echo "export XDG_RUNTIME_DIR=/run/user/\$(id -u)" >> ~/.bashrc'
 
 # ── Git config ──────────────────────────────────────────
+# Set defaults only — `vagrant provision` may run after the user has
+# configured real identity, and unconditionally setting these clobbers it.
 su - vagrant -c 'git config --global init.defaultBranch main'
-su - vagrant -c 'git config --global user.name "Your Name"'
-su - vagrant -c 'git config --global user.email "you@example.com"'
+su - vagrant -c 'git config --global --get user.name  >/dev/null 2>&1 || git config --global user.name  "Your Name"'
+su - vagrant -c 'git config --global --get user.email >/dev/null 2>&1 || git config --global user.email "you@example.com"'
