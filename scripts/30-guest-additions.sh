@@ -20,15 +20,26 @@ echo ">> Instalando VirtualBox Guest Additions..."
 apt-get install -y -qq linux-headers-amd64 dkms
 # Extract just the leading semver-shaped portion from whatever VBoxControl
 # reports — "7.2.6r170137", "7.2.6-rc1", "7.2.6_Beta1" all collapse to "7.2.6".
-# `grep -oE` exits 1 on no match, falling through to the literal default.
+# bento boxes always write /home/vagrant/.vbox_version during box build, so
+# the file path is the primary source of truth. VBoxControl is the fallback
+# when GA was pre-installed by some other means. Abort if neither works:
+# silently picking a hardcoded default (e.g. "7.2.6") would download a
+# possibly-stale ISO that no longer matches the host's VBox version, and
+# masks the real "the base box is broken" failure mode.
 VBOX_VERSION=$( \
   cat /home/vagrant/.vbox_version 2>/dev/null \
   || VBoxControl --version 2>/dev/null | head -1 | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' \
-  || echo "7.2.6" \
+  || true \
 )
-# `cat` succeeds with status 0 even when the file is empty, so the fallback
-# chain above doesn't catch an empty .vbox_version. Belt-and-braces default.
-VBOX_VERSION="${VBOX_VERSION:-7.2.6}"
+# `cat` succeeds with status 0 even when the file is empty, so check the
+# resulting value, not the exit chain.
+if [[ -z "$VBOX_VERSION" ]]; then
+  echo "✗ Could not detect VirtualBox Guest Additions version." >&2
+  echo "   /home/vagrant/.vbox_version is missing or empty, and VBoxControl is unavailable." >&2
+  echo "   Set the version manually before re-provisioning, e.g.:" >&2
+  echo "     echo 7.2.6 | sudo tee /home/vagrant/.vbox_version" >&2
+  exit 1
+fi
 VBOX_ISO="/home/vagrant/VBoxGuestAdditions_${VBOX_VERSION}.iso"
 if [ ! -f "$VBOX_ISO" ]; then
   curl -fsSL -o "$VBOX_ISO" "https://download.virtualbox.org/virtualbox/${VBOX_VERSION}/VBoxGuestAdditions_${VBOX_VERSION}.iso" || true
