@@ -46,3 +46,11 @@ usermod -aG docker vagrant
 
 # ── Senha do usuário vagrant ────────────────────────────
 echo 'vagrant:docks' | chpasswd
+
+# ── Limpeza pós-install ─────────────────────────────────
+# After the batch install, /var/cache/apt/archives has a ~1 GB pile of .deb
+# files we won't need again unless we reinstall. autoremove drops orphaned
+# auto-installed deps; clean wipes the cached .debs themselves.
+echo ">> Liberando espaço em disco após o batch install..."
+apt-get -y -qq autoremove
+apt-get -y -qq clean
