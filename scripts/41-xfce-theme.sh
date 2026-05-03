@@ -29,7 +29,6 @@ mkdir -p /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml
 
 fetch_asset xsettings.xml       /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
 fetch_asset xfwm4.xml           /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml
-fetch_asset xfce4-terminal.xml  /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-terminal.xml
 
 chown -R vagrant:vagrant /home/vagrant/.config/xfce4
 
