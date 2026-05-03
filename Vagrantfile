@@ -85,7 +85,7 @@ SCRIPTS = %w[
 ]
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "debian/trixie64"
+  config.vm.box = "bento/debian-13"
   config.vm.hostname = "dev-box"
 
   # ── Rede ──────────────────────────────────────────────

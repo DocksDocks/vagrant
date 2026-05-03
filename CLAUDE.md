@@ -6,7 +6,7 @@ This repository contains a single `Vagrantfile` that provisions a complete Debia
 
 ## Key Technical Details
 
-- **Base box:** `debian/trixie64` (Debian 13, stable). We pin to Trixie rather than `debian/testing64` because `testing` now tracks Forky (Debian 14 dev), where packages like Tilix get auto-removed when transitive deps break.
+- **Base box:** `bento/debian-13` (Debian 13 Trixie, stable). We use Bento's image rather than the Debian Cloud Team's `debian/trixie64` because the latter is published with the **libvirt provider only** as of 2026 ([Debian bug #1110834](https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1110834) — original maintainer stepped down after Vagrant's license change, new maintainer publishes libvirt-only). We also avoid `debian/testing64` because `testing` now tracks Forky (Debian 14 dev), where packages like Tilix get auto-removed when transitive deps break. Bento ships VirtualBox/VMware/Parallels by default and is actively maintained (Debian 13.3 as of Nov 2025).
 - **Hypervisor:** VirtualBox with VMSVGA graphics controller (the correct one for Linux guests; VBoxSVGA is for Windows)
 - **Desktop:** XFCE 4 with LightDM (autologin as `vagrant`, password: `docks`)
 - **Theme:** Arc-Dark + Papirus-Dark icons + Noto Sans font + DMZ-White cursor
