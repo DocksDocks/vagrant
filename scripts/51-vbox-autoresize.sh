@@ -13,4 +13,4 @@ export DEBIAN_FRONTEND=noninteractive
 
 mkdir -p /home/vagrant/.config/autostart
 fetch_asset vbox-autoresize.desktop /home/vagrant/.config/autostart/vbox-autoresize.desktop
-chown -R vagrant:vagrant /home/vagrant/.config/autostart
+# Ownership of /home/vagrant/* is corrected in scripts/95-permissions.sh.

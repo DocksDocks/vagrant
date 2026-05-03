@@ -83,6 +83,7 @@ SCRIPTS = %w[
   80-git-ssh-lazygit
   85-secrets-env
   90-claude-config-sync
+  95-permissions
   99-finalize
 ]
 

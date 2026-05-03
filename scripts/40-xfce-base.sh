@@ -84,4 +84,4 @@ cp /usr/share/applications/google-chrome.desktop \
 fetch_asset chrome-policy-no-gpu.json /etc/opt/chrome/policies/managed/no-gpu.json
 chmod 0644 /etc/opt/chrome/policies/managed/no-gpu.json
 
-chown -R vagrant:vagrant /home/vagrant/.config
+# Ownership of /home/vagrant/* is corrected in scripts/95-permissions.sh.

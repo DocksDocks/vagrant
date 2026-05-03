@@ -25,9 +25,11 @@ USER_HOME=/home/vagrant
 SECRETS_FILE="$USER_HOME/.config/secrets.env"
 BASHRC="$USER_HOME/.bashrc"
 
-# 1. Placeholder file (don't clobber an existing one).
+# 1. Placeholder file (don't clobber an existing one). Ownership is set by
+# scripts/95-permissions.sh; mode 0600 must be set here so the file is locked
+# down from the moment it exists, regardless of when 95- runs.
 if [[ ! -e "$SECRETS_FILE" ]]; then
-  install -d -m 0700 -o vagrant -g vagrant "$USER_HOME/.config"
+  install -d -m 0700 "$USER_HOME/.config"
   cat > "$SECRETS_FILE" <<'EOF'
 # secrets.env — sourced from ~/.bashrc (managed by 85-secrets-env.sh).
 #
@@ -40,16 +42,15 @@ if [[ ! -e "$SECRETS_FILE" ]]; then
 # Keep this file out of any dotfile sync or backup that targets ~/.bashrc.
 EOF
   chmod 0600 "$SECRETS_FILE"
-  chown vagrant:vagrant "$SECRETS_FILE"
 fi
 
 # 2. Idempotent source-line append to ~/.bashrc. The marker is the script
 # filename in the comment — uniquely identifies our block on re-provision.
+# Ownership is corrected in scripts/95-permissions.sh.
 if ! grep -qF '85-secrets-env.sh' "$BASHRC" 2>/dev/null; then
   cat >> "$BASHRC" <<'BASHRC_SECRETS'
 
 # Source ~/.config/secrets.env if present (managed by 85-secrets-env.sh)
 [ -r "$HOME/.config/secrets.env" ] && . "$HOME/.config/secrets.env"
 BASHRC_SECRETS
-  chown vagrant:vagrant "$BASHRC"
 fi

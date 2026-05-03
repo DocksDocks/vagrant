@@ -79,5 +79,5 @@ if [ -n "$TILIX_ID" ] || [ -n "$VTE_VERSION" ]; then
   . /etc/profile.d/vte.sh
 fi
 BASHRC_VTE
-  chown vagrant:vagrant /home/vagrant/.bashrc
+  # Ownership of ~/.bashrc is corrected in scripts/95-permissions.sh.
 fi
