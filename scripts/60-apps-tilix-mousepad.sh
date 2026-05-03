@@ -30,3 +30,24 @@ fetch_asset tilix.dconf /tmp/tilix.dconf
 chown vagrant:vagrant /tmp/tilix.dconf
 su - vagrant -c 'dbus-launch dconf load /com/gexperts/Tilix/ < /tmp/tilix.dconf' || true
 rm -f /tmp/tilix.dconf
+
+# ── VTE shell integration (silences "Configuration Issue Detected" dialog) ──
+# Tilix requires VTE's bash hooks (OSC 7 cwd tracking, prompt markers) sourced
+# in interactive shells. Debian ships /etc/profile.d/vte-2.91.sh, but /etc/profile.d
+# is only sourced by login shells — Tilix spawns interactive non-login shells, so
+# the hooks never load and Tilix flags it. Symlink to the canonical vte.sh path
+# and source it from ~/.bashrc when running under VTE.
+# https://gnunn1.github.io/tilix-web/manual/vteconfig/
+if [[ -f /etc/profile.d/vte-2.91.sh && ! -e /etc/profile.d/vte.sh ]]; then
+  ln -s vte-2.91.sh /etc/profile.d/vte.sh
+fi
+if ! grep -q 'TILIX_ID' /home/vagrant/.bashrc 2>/dev/null; then
+  cat >> /home/vagrant/.bashrc <<'BASHRC_VTE'
+
+# VTE shell integration for Tilix (OSC 7 cwd + prompt markers)
+if [ -n "$TILIX_ID" ] || [ -n "$VTE_VERSION" ]; then
+  . /etc/profile.d/vte.sh
+fi
+BASHRC_VTE
+  chown vagrant:vagrant /home/vagrant/.bashrc
+fi
