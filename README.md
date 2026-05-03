@@ -170,11 +170,33 @@ Depois rode `vagrant reload` para aplicar.
 
 ```
 .
-├── Vagrantfile   # Toda a configuração e provisionamento da VM
-├── CLAUDE.md     # Contexto técnico para sessões Claude Code
-└── README.md     # Este arquivo
+├── Vagrantfile     # host detection, VM config, registers per-concern provisioners
+├── scripts/        # numbered shell scripts, fetched from GitHub at provision time
+│   ├── 10-apt-repos.sh
+│   ├── 20-packages.sh
+│   ├── 30-guest-additions.sh
+│   ├── 40-xfce-base.sh
+│   ├── 41-xfce-theme.sh
+│   ├── 50-vboxclient-supervisor.sh
+│   ├── 51-vbox-autoresize.sh
+│   ├── 60-apps-tilix-mousepad.sh
+│   ├── 65-superfile-fonts.sh
+│   ├── 70-nodejs-claude.sh
+│   ├── 80-git-ssh-lazygit.sh
+│   ├── 85-secrets-env.sh
+│   └── 90-claude-config-sync.sh
+├── assets/         # XFCE/Tilix/Chrome configs, systemd units, helper scripts
+├── plans/          # design docs (clipboard supervisor, Vagrantfile split)
+├── CLAUDE.md       # Contexto técnico para sessões Claude Code
+└── README.md       # Este arquivo
 ```
 
 ## Expandindo
 
-Para adicionar novas ferramentas, edite a seção de provisionamento no `Vagrantfile` (bloco `SHELL`) e rode `vagrant provision`. O script usa `set -euo pipefail`, então qualquer erro interrompe a execução para facilitar o debug.
+Para adicionar uma nova ferramenta:
+
+1. **Pacote apt simples** — adicione na lista de `apt-get install` em `scripts/20-packages.sh` e rode `vagrant provision`.
+2. **Instalação customizada (curl + tar, GitHub release, etc.)** — crie um novo script numerado em `scripts/` (escolha um número que reflita a ordem de execução, ex.: `75-meu-tool.sh`), adicione-o ao array `SCRIPTS` no `Vagrantfile`, e rode `vagrant provision`.
+3. **Configuração estática (XML, JSON, systemd unit)** — coloque o arquivo em `assets/` e use a função `fetch_asset` dentro do script que aplica a config.
+
+Cada script começa com `set -euo pipefail`, então qualquer erro não tratado interrompe o provisionamento. Comandos que podem falhar legitimamente (ex.: `gsettings`, `dconf`) usam `|| true`. Para forçar reinstalação dos componentes idempotentes (Guest Additions, Nerd Font, superfile, nvm, Node, pnpm, Claude Code), rode `FORCE_REINSTALL=1 vagrant provision`.

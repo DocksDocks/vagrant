@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This repository contains a single `Vagrantfile` that provisions a complete Debian 13 (Trixie, stable) development VM with XFCE desktop, running on VirtualBox. Everything is configured via inline shell provisioning — there are no external scripts.
+This repository provisions a complete Debian 13 (Trixie, stable) development VM with XFCE desktop on VirtualBox. The `Vagrantfile` is thin (~200 lines) and delegates each concern to a numbered shell script under `scripts/`, with static configs under `assets/`. Scripts are fetched from `raw.githubusercontent.com/${SCRIPTS_REPO}/${SCRIPTS_REF}/scripts/` at provision time, or read from `/vagrant/assets/` if `VAGRANT_SCRIPTS_DIR` is set (local-dev mode). See `plans/0002-split-vagrantfile.md` for the design rationale.
 
 ## Key Technical Details
 
@@ -16,21 +16,25 @@ This repository contains a single `Vagrantfile` that provisions a complete Debia
 
 ## Architecture
 
-The Vagrantfile is self-contained (~515 lines) with this structure:
+The `Vagrantfile` (~200 lines) handles host-side resource detection and the VirtualBox config, then iterates `SCRIPTS = %w[...]` and registers one shell provisioner per script. Each provisioner either runs the local file (`VAGRANT_SCRIPTS_DIR=./scripts`) or fetches it from `raw.githubusercontent.com` at run time.
 
-1. **Host detection** (lines 1-51): Auto-detect RAM/CPUs/audio driver
-2. **VirtualBox config** (lines 62-76): VM resources, graphics, clipboard, audio
-3. **Shell provisioner** (lines 79-512): All provisioning in a single inline script
-   - System update + external repos (Chrome, Docker, GitHub CLI)
-   - Package installation (single `apt-get install` with all packages)
-   - VirtualBox Guest Additions installation from ISO
-   - LightDM autologin configuration (dynamic session name detection)
-   - XFCE theme/panel/dock configuration via XML files
-   - Application configs (Tilix via dconf, Mousepad via gsettings)
-   - Node.js (nvm) + pnpm + Claude Code installation
-   - Lazygit, SSH key generation, git config
-   - SSOT `.claude` config sync from `DocksDocks/public`
-   - Reboot on first provision to activate graphical target
+1. **Host detection** (Vagrantfile lines 1-60): Auto-detect RAM/CPUs/audio driver, with the 16 GB / 8-core carve-out documented inline.
+2. **VirtualBox config** (Vagrantfile lines 96-110): VM resources, VMSVGA graphics, bidirectional clipboard, drag-and-drop, audio.
+3. **Per-concern shell scripts** (`scripts/`):
+   - `10-apt-repos.sh` — system update, timezone, grub-pc seed, external repos (Chrome, Docker, gh).
+   - `20-packages.sh` — batch `apt install`, Composer (with SHA-384 verification), docker group, vagrant password.
+   - `30-guest-additions.sh` — VBox Guest Additions from ISO (idempotent: skips if VBoxClient is present).
+   - `40-xfce-base.sh` — LightDM autologin, panel/dock layout, Chrome as default browser, Chrome no-GPU policy.
+   - `41-xfce-theme.sh` — Arc-Dark + Papirus + Noto Sans + Tilix CloseDialog icon overlay.
+   - `50-vboxclient-supervisor.sh` — supervised systemd --user units for clipboard/drag-n-drop.
+   - `51-vbox-autoresize.sh` — xev-based auto-resize workaround for VBox GA #568.
+   - `60-apps-tilix-mousepad.sh` — dconf-compile of Tilix + Mousepad settings, VTE shell-integration in `~/.bashrc`.
+   - `65-superfile-fonts.sh` — JetBrainsMono Nerd Font + superfile (idempotent).
+   - `70-nodejs-claude.sh` — nvm + Node LTS + pnpm + Claude Code (idempotent).
+   - `80-git-ssh-lazygit.sh` — Lazygit, SSH key, bashrc aliases, default git config (only if not already set).
+   - `85-secrets-env.sh` — scaffolds `~/.config/secrets.env` (mode 0600) and adds a guarded source line to `~/.bashrc`.
+   - `90-claude-config-sync.sh` — clones `DocksDocks/public`, runs `sync.sh`, deletes the working copy.
+4. **Finalize** (Vagrantfile, inline `99-finalize`): version banner, SSH public key, reboot-on-first-provision to activate `graphical.target`.
 
 ## Important Patterns
 
@@ -42,7 +46,11 @@ The Vagrantfile is self-contained (~515 lines) with this structure:
 
 ## Installed Tools
 
-Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions, Composer, Docker + Compose + Buildx, Node.js LTS (nvm), npm, pnpm, Claude Code, ShellCheck, jq, ripgrep, build-essential, Tilix, fzf, bat, fd-find, htop, btop, tree, direnv, Lazygit, superfile (spf), JetBrainsMono Nerd Font, Google Chrome.
+**CLI:** Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions (curl, mbstring, xml, zip, bcmath, intl), Composer (SHA-384 verified at install), Docker + Compose v2 plugin + Buildx + containerd.io, Node.js LTS (nvm), npm, pnpm, Claude Code, ShellCheck, jq, ripgrep, build-essential, fzf, bat (alias `bat`→`batcat`), fd-find (alias `fd`→`fdfind`), htop, btop, tree, direnv, Lazygit, superfile (`spf`), wget, unzip, rsync, xclip.
+
+**Desktop:** XFCE 4 (panel, whiskermenu, docklike, taskmanager, notifyd, screenshooter), Tilix (split-pane terminal — default), Mousepad (text editor), LightDM + lightdm-gtk-greeter, Google Chrome, dbus-x11, xdg-utils, pulseaudio + alsa-utils, JetBrainsMono Nerd Font, fonts-noto + noto-color-emoji, Arc-Dark theme, Papirus + Papirus-Dark icons, DMZ-Cursor.
+
+**Not installed by default** (install on demand): `wine`, `imagemagick`, `xfce4-terminal`. Dropped from the default set because nothing in the repo invokes them and they add noticeable provision time.
 
 ## Testing Changes
 
