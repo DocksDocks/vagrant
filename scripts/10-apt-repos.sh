@@ -22,6 +22,23 @@ fetch_asset() {
 # ── Força dpkg não-interativo ───────────────────────────
 fetch_asset apt/99force-conf /etc/apt/apt.conf.d/99force-conf
 
+# ── Pre-seed grub-pc para evitar prompt interativo no upgrade ──
+# bento/debian-13 entrega a imagem sem grub-pc/install_devices definido em
+# debconf. Quando `apt-get upgrade` puxa um grub-pc novo (ex.: 2.12-9+deb13u1),
+# o postinst chama `grub-install` em modo dialog; sob DEBIAN_FRONTEND=noninteractive
+# isso aborta com "You must correct your GRUB install devices before proceeding"
+# e quebra todo o provisionamento. Detectamos o disco-raiz e fazemos o seed
+# antes do upgrade.
+ROOT_SRC=$(findmnt -no SOURCE / 2>/dev/null || true)
+ROOT_DISK=""
+if [[ -n "$ROOT_SRC" ]]; then
+  PKNAME=$(lsblk -no PKNAME "$ROOT_SRC" 2>/dev/null | awk 'NF{print; exit}' || true)
+  [[ -n "$PKNAME" ]] && ROOT_DISK="/dev/$PKNAME"
+fi
+ROOT_DISK="${ROOT_DISK:-/dev/sda}"
+echo "grub-pc grub-pc/install_devices multiselect $ROOT_DISK" | debconf-set-selections
+echo "grub-pc grub-pc/install_devices_empty boolean false"   | debconf-set-selections
+
 echo "══════════════════════════════════════════"
 echo "  Atualizando sistema base"
 echo "══════════════════════════════════════════"

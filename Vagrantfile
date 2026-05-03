@@ -129,8 +129,10 @@ Vagrant.configure("2") do |config|
       url = "https://raw.githubusercontent.com/#{SCRIPTS_REPO}/#{SCRIPTS_REF}/scripts/#{name}.sh"
       config.vm.provision name, type: "shell", env: env, inline: <<~SH
         set -euo pipefail
-        # debian/testing64 ships /tmp without sticky world-write; restore it so
-        # the vagrant user can create files/sockets (dbus-launch, git clone, ...).
+        # Defensive: ensure /tmp is sticky+world-write. bento/debian-13 ships
+        # this correctly, but earlier base boxes (debian/testing64) did not, and
+        # several scripts assume the vagrant user can create files/sockets there
+        # (dbus-launch, git clone, fetch_asset's curl temp dir, ...).
         chmod 1777 /tmp
         # Debian minimal ships without curl; bootstrap it on first use.
         if ! command -v curl >/dev/null 2>&1; then
