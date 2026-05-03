@@ -6,18 +6,8 @@ export DEBIAN_FRONTEND=noninteractive
 : "${SCRIPTS_REPO:=docksdocks/vagrant}"
 : "${SCRIPTS_REF:=main}"
 
-fetch_asset() {
-  local rel="$1" dest="$2"
-  # Local-dev mode: the repo is mounted at /vagrant on the guest (default shared folder).
-  if [[ -n "${VAGRANT_SCRIPTS_DIR:-}" && -f "/vagrant/assets/${rel}" ]]; then
-    install -D -m 0644 "/vagrant/assets/${rel}" "$dest"
-  else
-    install -d "$(dirname "$dest")"
-    curl -fsSL --retry 4 --retry-delay 2 \
-      "https://raw.githubusercontent.com/${SCRIPTS_REPO}/${SCRIPTS_REF}/assets/${rel}" \
-      -o "$dest"
-  fi
-}
+# shellcheck source=_lib.sh
+. "${VAGRANT_LIB_PATH:-/vagrant/scripts/_lib.sh}"
 
 # ── LightDM autologin ───────────────────────────────────
 mkdir -p /etc/lightdm/lightdm.conf.d
