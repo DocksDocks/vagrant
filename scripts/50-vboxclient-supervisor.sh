@@ -19,6 +19,22 @@ mkdir -p /home/vagrant/.config/autostart \
 # Remove the pre-fix VBoxClient-all autostart (superseded by supervised units)
 rm -f /home/vagrant/.config/autostart/vboxclient-all.desktop
 
+# Disable Oracle's /etc/X11/Xsession.d/98vboxadd-xclient so it stops pre-launching
+# `VBoxClient --clipboard` and `VBoxClient --draganddrop` at X login. Those processes
+# claim the X11 VBOXCLIENT_STARTED atom and prevent the supervised systemd units
+# below from ever taking over (symptom: vbox-clipboard.service stuck in
+# Restart=always loop with "service already running, exitting"). vboxclient-session.desktop
+# already handles --vmsvga / --seamless / --display, so Oracle's Xsession.d helper
+# is fully redundant. dpkg-divert keeps the override across virtualbox-guest-utils
+# upgrades. See plans/0003-vboxclient-xsession-divert.md.
+if [ -f /etc/X11/Xsession.d/98vboxadd-xclient ] && \
+   ! dpkg-divert --list /etc/X11/Xsession.d/98vboxadd-xclient 2>/dev/null \
+       | grep -q '98vboxadd-xclient\.disabled'; then
+  dpkg-divert --add --rename --quiet \
+    --divert /etc/X11/Xsession.d/98vboxadd-xclient.disabled \
+    /etc/X11/Xsession.d/98vboxadd-xclient
+fi
+
 fetch_asset systemd/vbox-clipboard.service   /home/vagrant/.config/systemd/user/vbox-clipboard.service
 fetch_asset systemd/vbox-draganddrop.service /home/vagrant/.config/systemd/user/vbox-draganddrop.service
 

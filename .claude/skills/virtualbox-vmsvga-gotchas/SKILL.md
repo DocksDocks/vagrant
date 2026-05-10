@@ -19,8 +19,9 @@ metadata:
     - "assets/vbox-autoresize.desktop"
     - "assets/chrome-policy-no-gpu.json"
     - "plans/0001-clipboard-supervisor.md"
+    - "plans/0003-vboxclient-xsession-divert.md"
     - "CLAUDE.md"
-  updated: "2026-05-03"
+  updated: "2026-05-10"
 ---
 
 # VirtualBox VMSVGA Gotchas
@@ -39,6 +40,10 @@ Keep `vblank_mode=off` in `assets/xfwm4.xml` even when compositing is enabled. x
 
 <constraint>
 Keep `/etc/opt/chrome/policies/managed/no-gpu.json` deployed. Removing it causes Chrome to deadlock under combined load (Next.js + Chrome + Claude) because VMSVGA has no real GPU (VBox bug #15417). Source: `scripts/40-xfce-base.sh:80-85`.
+</constraint>
+
+<constraint>
+Keep Oracle's `/etc/X11/Xsession.d/98vboxadd-xclient` disabled via `dpkg-divert` (renamed to `.disabled`). If it runs at X login it pre-launches `VBoxClient --clipboard` / `--draganddrop` outside systemd, those processes claim the X11 `VBOXCLIENT_STARTED` atom, and the supervised units in plans/0001 can never take over (symptom: `vbox-clipboard.service` stuck in Restart=always loop with `Shared Clipboard: service already running, exitting`, save-state→resume cannot auto-recover). Source: `scripts/50-vboxclient-supervisor.sh`, `plans/0003-vboxclient-xsession-divert.md`.
 </constraint>
 
 ## When to Use
