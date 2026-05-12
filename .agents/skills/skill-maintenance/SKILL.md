@@ -1,18 +1,18 @@
 ---
 name: skill-maintenance
-description: Use when adding, refreshing, splitting, merging, or rewriting a project skill under .claude/skills/, validating a skill's frontmatter (name kebab-case matching directory, description starts with "Use when…" and contains "Not for…", user-invocable false, metadata.source_files, metadata.updated YYYY-MM-DD), checking the 500-line body cap and reference-file size budgets, bumping metadata.updated after a code change touches a skill's source_files, running guard-skills.sh / score-skills.sh validators, or vendoring a third-party skill (with the upstream source / license / vendored_at frontmatter block that relaxes kit-specific checks). Not for agent authoring (use agents directory), ADR plans/, or shell-script bodies under scripts/.
+description: Use when adding, refreshing, splitting, merging, or rewriting a project skill under .agents/skills/, validating a skill's frontmatter (name kebab-case matching directory, description starts with "Use when…" and contains "Not for…", user-invocable false, metadata.source_files, metadata.updated YYYY-MM-DD), checking the 500-line body cap and reference-file size budgets, bumping metadata.updated after a code change touches a skill's source_files, or vendoring a third-party skill (with the upstream source / license / vendored_at frontmatter block that relaxes kit-specific checks). Not for agent authoring (use agents directory), ADR plans/, or shell-script bodies under scripts/.
 user-invocable: false
 metadata:
   pattern: reviewer
   source_files:
-    - ".claude/skills/provisioning-script-conventions/SKILL.md"
-    - ".claude/skills/vagrantfile-orchestrator/SKILL.md"
-    - ".claude/skills/virtualbox-vmsvga-gotchas/SKILL.md"
-    - ".claude/skills/xfce-desktop-config/SKILL.md"
-    - ".claude/skills/secrets-env-convention/SKILL.md"
-    - ".claude/skills/plans-adr-format/SKILL.md"
-    - ".claude/skills/skill-maintenance/SKILL.md"
-  updated: "2026-05-03"
+    - ".agents/skills/provisioning-script-conventions/SKILL.md"
+    - ".agents/skills/vagrantfile-orchestrator/SKILL.md"
+    - ".agents/skills/virtualbox-vmsvga-gotchas/SKILL.md"
+    - ".agents/skills/xfce-desktop-config/SKILL.md"
+    - ".agents/skills/secrets-env-convention/SKILL.md"
+    - ".agents/skills/plans-adr-format/SKILL.md"
+    - ".agents/skills/skill-maintenance/SKILL.md"
+  updated: "2026-05-11"
 ---
 
 # Skill Maintenance
@@ -65,12 +65,12 @@ upstream:
   vendored_at: "2026-05-03"
 ```
 
-The `upstream:` block signals `guard-skills.sh`/`score-skills.sh` to relax kit-specific checks (CSO start-prefix, `user-invocable`, `metadata.updated`). Universal structural checks still apply (fenced frontmatter, name matches directory, description length, 500-line cap).
+The `upstream:` block signals that the skill is vendored from an external source, so kit-specific checks (CSO start-prefix requirement, `user-invocable`, `metadata.updated` freshness) may be relaxed. Universal structural checks still apply (fenced frontmatter, name matches directory, description length, 500-line cap).
 
 ## File Layout
 
 ```
-.claude/skills/<name>/
+.agents/skills/<name>/
   SKILL.md              # frontmatter + body (≤500 lines body)
   references/           # optional; detail files (30-150 lines each)
     <topic>.md
@@ -113,21 +113,11 @@ When a source file changes:
 
 ## Adding a New Skill
 
-1. Create `.claude/skills/<name>/SKILL.md` with valid frontmatter.
+1. Create `.agents/skills/<name>/SKILL.md` with valid frontmatter.
 2. Write body ≤500 lines; extract detail to `references/` as needed.
 3. Verify `name` frontmatter matches directory name exactly.
 4. Verify description starts "Use when…" and contains "Not for…".
 5. Verify `metadata.source_files` lists actual project files (not invented paths).
-6. Run `bash guard-skills.sh` (if it exists — see note below).
-7. Run `bash score-skills.sh` (if it exists — see note below).
-
-## Validators
-
-**NOTE:** As of 2026-05-03 this project does not yet have `guard-skills.sh` or `score-skills.sh` in the repo root. These validators are standard kit tooling from the agentskills.io ecosystem. When they are added, run them after every skill create/update.
-
-Expected behavior when present:
-- `guard-skills.sh` — structural checks: fenced frontmatter, name matches directory, description ≤1024 chars, body ≤500 lines, `user-invocable` present. Exits non-zero on failure.
-- `score-skills.sh` — quality scoring: CSO compliance, source_files reachable, updated date not stale, references within size budget. Returns a score (not a pass/fail).
 
 ## CSO Description Rules
 

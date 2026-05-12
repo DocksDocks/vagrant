@@ -12,7 +12,7 @@ description: >
   or running a curl-fetched installer as root with SHA-384 verification. Not
   for diagnosing VirtualBox VMSVGA / clipboard / Chrome runtime symptoms (use
   vbox-gotcha-doctor), authoring ADRs under plans/ (use adr-author), or
-  maintaining .claude/skills/ files (use skill-maintainer).
+  maintaining .agents/skills/ files (use skill-maintainer).
 tools: Read, Grep, Glob, Bash, Edit, Write
 model: opus
 ---
@@ -80,11 +80,11 @@ Source: `Vagrantfile:72-88`, `Vagrantfile:119`.
 
 1. Acknowledge plan-file context if provided (new script purpose, target slot,
    asset requirements, or XFCE/dconf config change).
-2. Read `@.claude/skills/provisioning-script-conventions/SKILL.md` to confirm
+2. Read `@.agents/skills/provisioning-script-conventions/SKILL.md` to confirm
    current preamble template, `fetch_asset` signature, and idempotency tactic
    table. If the task touches XFCE, dconf, or LightDM, also read
-   `@.claude/skills/xfce-desktop-config/SKILL.md`. If it touches VBoxClient or
-   systemd --user units, read `@.claude/skills/virtualbox-vmsvga-gotchas/SKILL.md`.
+   `@.agents/skills/xfce-desktop-config/SKILL.md`. If it touches VBoxClient or
+   systemd --user units, read `@.agents/skills/virtualbox-vmsvga-gotchas/SKILL.md`.
 3. Determine the numbered slot: read `Vagrantfile:72-88` for existing entries;
    use a free gap (25, 35, 45, 55, 75) or the next sequential number.
 4. Draft the script with mandatory preamble, default-value guards

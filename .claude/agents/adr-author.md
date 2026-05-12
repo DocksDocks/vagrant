@@ -60,7 +60,7 @@ Source: `plans/0002-split-vagrantfile.md:114-124`.
 
 1. Acknowledge plan-file context if provided (which design decision to document,
    what alternatives were considered).
-2. Read `@.claude/skills/plans-adr-format/SKILL.md` to confirm required section
+2. Read `@.agents/skills/plans-adr-format/SKILL.md` to confirm required section
    structure, Status values, and bug-reference URL formats.
 3. Read `plans/0001-clipboard-supervisor.md` and `plans/0002-split-vagrantfile.md`
    in full to calibrate tone and section depth before drafting.
@@ -75,7 +75,7 @@ Source: `plans/0002-split-vagrantfile.md:114-124`.
 8. In "Verification": include at least one concrete shell command or browser URL
    proving the decision was correctly implemented.
 9. In "Root cause": cite upstream bug tracker URLs. Cross-reference with
-   `@.claude/skills/virtualbox-vmsvga-gotchas/SKILL.md` when documenting a
+   `@.agents/skills/virtualbox-vmsvga-gotchas/SKILL.md` when documenting a
    VirtualBox workaround.
 10. In "Files changed": list every file that changes — scripts, assets,
     Vagrantfile, and any other plans affected.

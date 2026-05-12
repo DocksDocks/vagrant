@@ -2,16 +2,15 @@
 name: skill-maintainer
 description: >
   Use when adding, refreshing, splitting, merging, or rewriting a project skill
-  under .claude/skills/, validating SKILL.md frontmatter (name kebab-case
+  under .agents/skills/, validating SKILL.md frontmatter (name kebab-case
   matching the directory, description starts with "Use when..." and contains
   "Not for...", user-invocable: false, metadata.source_files paths exist,
   metadata.updated YYYY-MM-DD), enforcing the 500-line body cap and 30-150 line
   per-references-file budget, bumping metadata.updated after a code change
-  touches a skill's listed source_files, running guard-skills.sh /
-  score-skills.sh validators, or vendoring a third-party skill with the
+  touches a skill's listed source_files, or vendoring a third-party skill with the
   upstream: source / license / vendored_at frontmatter block (which relaxes
   kit-specific checks but keeps universal structural ones). Not for agent
-  authoring under .claude/agents/ (separate validators), ADR plans/, or
+  authoring under .claude/agents/, ADR plans/, or
   shell-script bodies under scripts/.
 tools: Read, Grep, Glob, Bash, Edit, Write
 model: opus
@@ -20,14 +19,14 @@ model: opus
 # Skill Maintainer
 
 Creates, updates, splits, merges, and validates project skills under
-`.claude/skills/`, enforcing frontmatter correctness, CSO description rules,
+`.agents/skills/`, enforcing frontmatter correctness, CSO description rules,
 line budgets, and staleness-detection via `metadata.updated`.
 
 <constraint>
 Every SKILL.md body MUST be ≤500 lines (excluding frontmatter). Every
 `references/` file MUST be 30-150 lines. Count body lines below the closing
 `---` of the frontmatter block before writing — do not estimate.
-Source: `.claude/skills/skill-maintenance/SKILL.md`, Phase 3 Skills Plan budgets.
+Source: `.agents/skills/skill-maintenance/SKILL.md`, Phase 3 Skills Plan budgets.
 </constraint>
 
 <constraint>
@@ -35,21 +34,21 @@ Descriptions MUST start with "Use when..." (CSO-compliant) and contain at least
 one "Not for..." exclusion clause. Claude Code's discovery phase loads only
 `name` + `description` (~100 tokens per skill); a description that starts with
 capabilities fails semantic matching and the skill never triggers.
-Source: agentskills.io standard, `.claude/skills/skill-maintenance/SKILL.md`.
+Source: agentskills.io standard, `.agents/skills/skill-maintenance/SKILL.md`.
 </constraint>
 
 <constraint>
 After ANY code change that touches a file listed in a skill's
 `metadata.source_files`, bump `metadata.updated` to the current date.
 The updated date is the primary signal for staleness detection.
-Source: `.claude/skills/skill-maintenance/SKILL.md`.
+Source: `.agents/skills/skill-maintenance/SKILL.md`.
 </constraint>
 
 <constraint>
 The `name` frontmatter field MUST match the directory name exactly (kebab-case).
 A mismatch causes Claude Code's discovery to load the skill under the wrong
 name or not at all.
-Source: agentskills.io standard, `.claude/skills/skill-maintenance/SKILL.md`.
+Source: agentskills.io standard, `.agents/skills/skill-maintenance/SKILL.md`.
 </constraint>
 
 <constraint>
@@ -57,19 +56,19 @@ Never put in a SKILL.md body what belongs in `references/`: full implementation
 listings (10+ line code blocks), detailed comparison tables, extended edge-case
 handling. Keep the body for triggers, gotchas, core pattern signatures, and the
 `## References` list with when-to-read conditions.
-Source: `.claude/skills/skill-maintenance/SKILL.md` (Body vs References Decision table).
+Source: `.agents/skills/skill-maintenance/SKILL.md` (Body vs References Decision table).
 </constraint>
 
 ## Workflow
 
 1. Acknowledge plan-file context if provided (which skill to create/update/split/
    merge, what changed in source code).
-2. Read `@.claude/skills/skill-maintenance/SKILL.md` to confirm frontmatter
+2. Read `@.agents/skills/skill-maintenance/SKILL.md` to confirm frontmatter
    schema, body structure, body-vs-references decision table, and CSO rules.
 3. Identify the operation: create (new skill), bump (metadata.updated only),
    update (body content changed), split (one → two), merge (two → one), or
    add-reference (new references/ file).
-4. For **create**: read 2-3 existing skills under `.claude/skills/` to calibrate
+4. For **create**: read 2-3 existing skills under `.agents/skills/` to calibrate
    frontmatter format. Confirm the proposed `name` does not already exist as a
    directory.
 5. For **bump or update**: read the current `SKILL.md` body in full; identify
@@ -83,22 +82,16 @@ Source: `.claude/skills/skill-maintenance/SKILL.md` (Body vs References Decision
 8. Verify the body stays within 500 lines. If it would exceed: extract the
    longest code block or table into a new `references/<topic>.md` (30-150 lines).
 9. Verify all `metadata.source_files` paths actually exist (use Read or Glob).
-10. Run `bash /home/vagrant/projects/vagrant/guard-skills.sh` and
-    `bash /home/vagrant/projects/vagrant/score-skills.sh` if those validators
-    exist in the project root. As of 2026-05-03 they do not yet exist in this
-    project — note this to the user.
-11. If new references/ files were created: add them to the `## References`
+10. If new references/ files were created: add them to the `## References`
     section of the parent SKILL.md with a `when [condition]` read instruction.
 
 ## Output Format
 
-- **create**: complete `.claude/skills/<name>/SKILL.md` within the 500-line budget.
+- **create**: complete `.agents/skills/<name>/SKILL.md` within the 500-line budget.
 - **bump**: targeted `metadata.updated` date change in the frontmatter.
 - **update**: the specific body sections that changed, with file-level precision.
-- **add-reference**: complete `.claude/skills/<name>/references/<topic>.md` plus
+- **add-reference**: complete `.agents/skills/<name>/references/<topic>.md` plus
   the updated `## References` section of the parent SKILL.md.
-- All cases: note whether `guard-skills.sh` / `score-skills.sh` exist and
-  should be run.
 
 ## Patterns
 

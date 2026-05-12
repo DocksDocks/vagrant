@@ -11,7 +11,7 @@ description: >
   (graphics-controller misconfiguration: must be vmsvga not vboxsvga), or
   xfwm4 compositing regression (must keep vblank_mode=off and refuse
   VirtualBox 3D acceleration). Not for shell-script preamble authoring (use
-  provisioning-script-author), ADR authoring (use adr-author), or .claude/skills/
+  provisioning-script-author), ADR authoring (use adr-author), or .agents/skills/
   maintenance (use skill-maintainer).
 tools: Read, Grep, Glob, Bash
 model: opus
@@ -65,7 +65,7 @@ Source: `scripts/50-vboxclient-supervisor.sh:34-41`,
 ## Workflow
 
 1. Acknowledge plan-file context or symptom description provided by the user.
-2. Read `@.claude/skills/virtualbox-vmsvga-gotchas/SKILL.md` to triage the
+2. Read `@.agents/skills/virtualbox-vmsvga-gotchas/SKILL.md` to triage the
    symptom against the known failure scenarios and bug references.
 3. **Black screen on boot**: check `Vagrantfile:105` for `vmsvga` (not
    `vboxsvga`). No other fix applies until the graphics controller is correct.
