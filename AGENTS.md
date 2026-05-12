@@ -32,10 +32,10 @@ The `Vagrantfile` (~200 lines) handles host-side resource detection and the Virt
    - `51-vbox-autoresize.sh` — xev-based auto-resize workaround for VBox GA #568.
    - `60-apps-tilix-mousepad.sh` — dconf-compile of Tilix + Mousepad settings, VTE shell-integration in `~/.bashrc`.
    - `65-superfile-fonts.sh` — JetBrainsMono Nerd Font + superfile (idempotent).
-   - `70-nodejs-claude.sh` — nvm + Node LTS + pnpm + Claude Code (idempotent).
+   - `70-nodejs-claude.sh` — nvm + Node LTS + pnpm + Claude Code + Codex CLI (idempotent).
    - `80-git-ssh-lazygit.sh` — Lazygit, SSH key, bashrc aliases, default git config (only if not already set).
    - `85-secrets-env.sh` — scaffolds `~/.config/secrets.env` (mode 0600) and adds a guarded source line to `~/.bashrc`.
-   - `90-claude-config-sync.sh` — clones `DocksDocks/public`, runs `sync.sh`, deletes the working copy.
+   - `90-claude-config-sync.sh` — clones `DocksDocks/public`, runs `sync.sh` for Claude/Codex config, deletes the working copy.
 4. **Finalize** (Vagrantfile, inline `99-finalize`): version banner, SSH public key, reboot-on-first-provision to activate `graphical.target`.
 
 ## Important Patterns
@@ -48,7 +48,7 @@ The `Vagrantfile` (~200 lines) handles host-side resource detection and the Virt
 
 ## Installed Tools
 
-**CLI:** Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions (curl, mbstring, xml, zip, bcmath, intl), Composer (SHA-384 verified at install), Docker + Compose v2 plugin + Buildx + containerd.io, Node.js LTS (nvm), npm, pnpm, Claude Code, ShellCheck, jq, ripgrep, build-essential, fzf, bat (alias `bat`→`batcat`), fd-find (alias `fd`→`fdfind`), htop, btop, tree, direnv, Lazygit, superfile (`spf`), wget, unzip, rsync, xclip.
+**CLI:** Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions (curl, mbstring, xml, zip, bcmath, intl), Composer (SHA-384 verified at install), Docker + Compose v2 plugin + Buildx + containerd.io, Node.js LTS (nvm), npm, pnpm, Claude Code, Codex CLI, ShellCheck, jq, yq, ripgrep, build-essential, fzf, bat (alias `bat`→`batcat`), fd-find (alias `fd`→`fdfind`), htop, btop, tree, direnv, Lazygit, superfile (`spf`), wget, unzip, rsync, xclip.
 
 **Desktop:** XFCE 4 (panel, whiskermenu, docklike, taskmanager, notifyd, screenshooter), Tilix (split-pane terminal — default), Mousepad (text editor), LightDM + lightdm-gtk-greeter, Google Chrome, dbus-x11, xdg-utils, pulseaudio + alsa-utils, JetBrainsMono Nerd Font, fonts-noto + noto-color-emoji, Arc-Dark theme, Papirus + Papirus-Dark icons, DMZ-Cursor.
 
@@ -72,7 +72,7 @@ Note: The first `vagrant up` takes several minutes (package downloads). Subseque
 
 `scripts/30-guest-additions.sh`, `scripts/65-superfile-fonts.sh`, and `scripts/70-nodejs-claude.sh` detect existing installs and skip them on re-provision — those are the scripts with real network/build cost. apt install is already idempotent in practice (already-installed packages take milliseconds).
 
-To force a full re-install of Guest Additions, the Nerd Font, superfile, nvm, Node, pnpm, and Claude Code:
+To force a full re-install of Guest Additions, the Nerd Font, superfile, nvm, Node, pnpm, Codex CLI, and Claude Code:
 ```bash
 FORCE_REINSTALL=1 vagrant provision
 ```

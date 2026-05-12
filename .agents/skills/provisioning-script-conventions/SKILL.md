@@ -1,6 +1,6 @@
 ---
 name: provisioning-script-conventions
-description: Use when adding or modifying a numbered shell provisioning script under scripts/ (10-apt-repos.sh, 20-packages.sh, 30-guest-additions.sh, 40-xfce-base.sh, 50-vboxclient-supervisor.sh, 60-apps-tilix-mousepad.sh, 70-nodejs-claude.sh, 80-git-ssh-lazygit.sh, 85-secrets-env.sh, 95-permissions.sh, 99-finalize.sh), sourcing $VAGRANT_LIB_PATH for the fetch_asset helper, writing the set -euo pipefail / DEBIAN_FRONTEND=noninteractive / default-value-guard preamble, deploying assets via fetch_asset REL DEST (local-dev /vagrant/assets vs raw.githubusercontent.com), respecting the SCRIPTS_REPO / SCRIPTS_REF / VAGRANT_SCRIPTS_DIR / FORCE_REINSTALL env-var contract, deciding where to put a new numbered slot (gaps for insertion), or running a downloaded installer as root with SHA-384 trust verification (composer.github.io/installer.sig pattern). Not for VirtualBox VMSVGA gotchas, XFCE desktop config, Vagrantfile Ruby-side host detection, or ADR authoring under plans/.
+description: Use when adding or modifying numbered provisioning scripts under scripts/ (10-apt-repos.sh through 99-finalize.sh), sourcing $VAGRANT_LIB_PATH / scripts/_lib.sh, deploying assets with fetch_asset REL DEST, respecting SCRIPTS_REPO / SCRIPTS_REF / VAGRANT_SCRIPTS_DIR / FORCE_REINSTALL, adding Vagrantfile SCRIPTS entries, or running downloaded installers with SHA-384 verification. Not for VirtualBox VMSVGA gotchas, XFCE desktop config, Ruby host detection, secrets.env, or ADRs under plans/.
 user-invocable: false
 metadata:
   pattern: tool-wrapper
@@ -10,17 +10,20 @@ metadata:
     - "scripts/20-packages.sh"
     - "scripts/30-guest-additions.sh"
     - "scripts/40-xfce-base.sh"
+    - "scripts/41-xfce-theme.sh"
     - "scripts/50-vboxclient-supervisor.sh"
+    - "scripts/51-vbox-autoresize.sh"
     - "scripts/60-apps-tilix-mousepad.sh"
     - "scripts/65-superfile-fonts.sh"
     - "scripts/70-nodejs-claude.sh"
     - "scripts/80-git-ssh-lazygit.sh"
     - "scripts/85-secrets-env.sh"
+    - "scripts/90-claude-config-sync.sh"
     - "scripts/95-permissions.sh"
     - "scripts/99-finalize.sh"
     - "plans/0002-split-vagrantfile.md"
     - "README.md"
-  updated: "2026-05-03"
+  updated: "2026-05-11"
 ---
 
 # Provisioning Script Conventions
@@ -174,7 +177,7 @@ Source: `assets/apt/99force-conf:1-4`, installed by `scripts/10-apt-repos.sh:13`
 
 **Missing `set -euo pipefail`**: a failing `apt-get install` or broken `curl` silently continues; the VM appears to provision but tools are missing or misconfigured. Every script must have this at line 3.
 
-**Appending to ~/.bashrc without grep-q guard**: each `vagrant provision` run duplicates the block. Five scripts currently append to bashrc — all use the grep-q pattern. Source: `scripts/80-git-ssh-lazygit.sh:16-22`, `scripts/85-secrets-env.sh:50`, `scripts/60-apps-tilix-mousepad.sh:74`, `scripts/70-nodejs-claude.sh:45`.
+**Appending to ~/.bashrc without grep-q guard**: each `vagrant provision` run duplicates the block. Four scripts currently append to bashrc — all use the grep-q pattern. Source: `scripts/80-git-ssh-lazygit.sh:16-22`, `scripts/85-secrets-env.sh:50`, `scripts/60-apps-tilix-mousepad.sh:74`, `scripts/70-nodejs-claude.sh:55`.
 
 **Missing `|| true` on `umount` / `systemctl enable`**: `set -e` aborts provisioning if the mount was never established or the unit doesn't exist yet. Source: `scripts/30-guest-additions.sh:48-50`.
 

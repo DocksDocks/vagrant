@@ -32,8 +32,10 @@ Instale os dois programas abaixo **antes** de começar:
 | **npm**          | Vem junto com o Node                                            |
 | **pnpm**         | Instalado globalmente via npm                                   |
 | **Claude Code**  | CLI nativa da Anthropic                                         |
+| **Codex CLI**    | CLI nativa da OpenAI, instalada globalmente via npm             |
 | **ShellCheck**   | Linter para shell scripts                                       |
 | **jq**           | Processador JSON para terminal                                  |
+| **yq**           | Processador YAML para terminal                                  |
 | **ripgrep**      | Busca ultrarrápida em código (`rg`)                             |
 | **build-essential** | gcc, make e headers — compilação de extensões nativas        |
 | **Tilix**        | Terminal com split panes (substitui tmux com GUI)                |
@@ -89,7 +91,7 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 - **Áudio habilitado** — saída de som via Intel HD Audio (sem microfone).
 - **Senha** do usuário `vagrant`: `docks`.
 - **Git config** — `init.defaultBranch` definido como `main`. Lembre-se de configurar `user.name` e `user.email`.
-- **Claude Code config** — configuração `.claude` sincronizada automaticamente do repositório SSOT (`DocksDocks/public`) no primeiro provisionamento.
+- **Config de agentes** — configurações `.claude` e `.codex` sincronizadas automaticamente do repositório SSOT (`DocksDocks/public`) no primeiro provisionamento.
 - **Timezone** configurado para `America/Sao_Paulo` (UTC-3).
 
 ## Primeiro uso (após provisionamento)
@@ -118,7 +120,7 @@ Na primeira execução, o Vagrant baixa a imagem do Debian 13, cria a VM no Virt
 vagrant ssh
 ```
 
-Você entra como o usuário `vagrant`. Todas as ferramentas (node, docker, pnpm, claude, etc.) já estarão disponíveis no PATH.
+Você entra como o usuário `vagrant`. Todas as ferramentas (node, docker, pnpm, claude, codex, etc.) já estarão disponíveis no PATH.
 
 ### Desligar a VM
 
@@ -201,4 +203,4 @@ Para adicionar uma nova ferramenta:
 2. **Instalação customizada (curl + tar, GitHub release, etc.)** — crie um novo script numerado em `scripts/` (escolha um número que reflita a ordem de execução, ex.: `75-meu-tool.sh`), adicione-o ao array `SCRIPTS` no `Vagrantfile`, e rode `vagrant provision`.
 3. **Configuração estática (XML, JSON, systemd unit)** — coloque o arquivo em `assets/` e use a função `fetch_asset` dentro do script que aplica a config.
 
-Cada script começa com `set -euo pipefail`, então qualquer erro não tratado interrompe o provisionamento. Comandos que podem falhar legitimamente (ex.: `gsettings`, `dconf`) usam `|| true`. Para forçar reinstalação dos componentes idempotentes (Guest Additions, Nerd Font, superfile, nvm, Node, pnpm, Claude Code), rode `FORCE_REINSTALL=1 vagrant provision`.
+Cada script começa com `set -euo pipefail`, então qualquer erro não tratado interrompe o provisionamento. Comandos que podem falhar legitimamente (ex.: `gsettings`, `dconf`) usam `|| true`. Para forçar reinstalação dos componentes idempotentes (Guest Additions, Nerd Font, superfile, nvm, Node, pnpm, Codex CLI, Claude Code), rode `FORCE_REINSTALL=1 vagrant provision`.

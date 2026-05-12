@@ -32,8 +32,10 @@ Install both before you start:
 | **npm**          | Bundled with Node                                                |
 | **pnpm**         | Globally installed via npm                                       |
 | **Claude Code**  | Anthropic's native CLI                                           |
+| **Codex CLI**    | OpenAI's native CLI, globally installed via npm                  |
 | **ShellCheck**   | Linter for shell scripts                                         |
 | **jq**           | JSON processor for the terminal                                  |
+| **yq**           | YAML processor for the terminal                                  |
 | **ripgrep**      | Ultra-fast code search (`rg`)                                    |
 | **build-essential** | gcc, make, headers — native extension compilation             |
 | **Tilix**        | Split-pane terminal (replaces tmux with a GUI)                   |
@@ -90,7 +92,7 @@ Works on Windows, macOS, and Linux. You can override the values by editing `vm_m
 - **Audio enabled** — output via Intel HD Audio (no microphone).
 - **`vagrant` user password**: `docks`.
 - **Git config** — `init.defaultBranch=main`. The placeholder `user.name` / `user.email` are only set if you haven't configured your own — re-running `vagrant provision` won't overwrite your real identity.
-- **Claude Code config** — `.claude` directory synced from the SSOT repo (`DocksDocks/public`) on first provision.
+- **Agent config sync** — `.claude` and `.codex` config synced from the SSOT repo (`DocksDocks/public`) on first provision.
 - **Timezone** — `America/Sao_Paulo` (UTC-3).
 - **`~/.config/secrets.env`** — 0600 placeholder file sourced from `~/.bashrc`. Drop sensitive `export` lines (API keys, OAuth tokens) here instead of polluting `~/.bashrc`.
 
@@ -122,7 +124,7 @@ On the first run, Vagrant downloads the Debian 13 image, creates the VirtualBox 
 vagrant ssh
 ```
 
-You log in as `vagrant`. Every tool (node, docker, pnpm, claude, etc.) is on `PATH`.
+You log in as `vagrant`. Every tool (node, docker, pnpm, claude, codex, etc.) is on `PATH`.
 
 ### Shut down the VM
 
@@ -138,7 +140,7 @@ Cleanly powers off, preserving disk state. The next `vagrant up` boots in second
 vagrant provision
 ```
 
-Useful when you've edited the Vagrantfile or a `scripts/*.sh` and want to apply changes without destroying the VM. The scripts are idempotent — re-running won't duplicate config. Force a full reinstall of the components that cache themselves (Guest Additions, Nerd Font, superfile, nvm, Node, pnpm, Claude Code) with:
+Useful when you've edited the Vagrantfile or a `scripts/*.sh` and want to apply changes without destroying the VM. The scripts are idempotent — re-running won't duplicate config. Force a full reinstall of the components that cache themselves (Guest Additions, Nerd Font, superfile, nvm, Node, pnpm, Codex CLI, Claude Code) with:
 
 ```bash
 FORCE_REINSTALL=1 vagrant provision
@@ -211,4 +213,4 @@ Then run `vagrant reload` to apply.
 2. **Custom install (curl + tar, GitHub release, etc.)** — create a new numbered script in `scripts/` (pick a number that reflects execution order, e.g. `75-mytool.sh`), add the name to the `SCRIPTS` array in `Vagrantfile`, and run `vagrant provision`.
 3. **Static config (XML, JSON, systemd unit)** — drop the file in `assets/` and use the shared `fetch_asset` helper from `scripts/_lib.sh` inside whichever script applies the config.
 
-Every script begins with `set -euo pipefail`, so any unhandled error aborts provisioning. Commands that may fail legitimately (e.g. `gsettings`, `dconf`) use `|| true`. To force reinstall of the components that cache themselves (Guest Additions, Nerd Font, superfile, nvm, Node, pnpm, Claude Code), run `FORCE_REINSTALL=1 vagrant provision`.
+Every script begins with `set -euo pipefail`, so any unhandled error aborts provisioning. Commands that may fail legitimately (e.g. `gsettings`, `dconf`) use `|| true`. To force reinstall of the components that cache themselves (Guest Additions, Nerd Font, superfile, nvm, Node, pnpm, Codex CLI, Claude Code), run `FORCE_REINSTALL=1 vagrant provision`.

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# 70-nodejs-claude.sh — nvm + Node LTS + pnpm + Claude Code.
+# 70-nodejs-claude.sh — nvm + Node LTS + pnpm + Claude Code + Codex CLI.
 #
 # Idempotency: on re-provision, skip each component that's already installed.
-# Set FORCE_REINSTALL=1 to redo everything. The three installs here (nvm,
-# node/pnpm, claude) each take tens of seconds and involve network calls, so
+# Set FORCE_REINSTALL=1 to redo everything. The component groups here (nvm,
+# node/pnpm, agent CLIs) each take tens of seconds and involve network calls, so
 # skipping them on re-provision is the biggest single speedup in the script set.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -22,13 +22,23 @@ fi
 # nvm's `current` reports the active version for the shell; if a default LTS
 # alias is set and pnpm is resolvable, we consider Node+pnpm installed.
 if [[ "$FORCE" != "1" ]] && \
-   su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh >/dev/null 2>&1 && \
-     [ "$(nvm current 2>/dev/null)" != "none" ] && \
-     command -v pnpm >/dev/null 2>&1' >/dev/null 2>&1; then
+   su - vagrant -c "source /home/vagrant/.nvm/nvm.sh >/dev/null 2>&1 && \
+     [ \"\$(nvm current 2>/dev/null)\" != \"none\" ] && \
+     command -v pnpm >/dev/null 2>&1" >/dev/null 2>&1; then
   echo ">> Node LTS + pnpm already installed — skipping."
 else
   echo ">> Instalando node LTS + pnpm..."
   su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && npm install -g pnpm'
+fi
+
+# ── Codex CLI ───────────────────────────────────────────
+if [[ "$FORCE" != "1" ]] && \
+   su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh >/dev/null 2>&1 && \
+     npm list -g --depth=0 @openai/codex >/dev/null 2>&1' >/dev/null 2>&1; then
+  echo ">> Codex CLI already installed — skipping."
+else
+  echo ">> Instalando codex cli..."
+  su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && npm install -g @openai/codex'
 fi
 
 # ── Claude Code ─────────────────────────────────────────
