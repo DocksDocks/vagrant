@@ -79,5 +79,5 @@ if [ -n "$TILIX_ID" ] || [ -n "$VTE_VERSION" ]; then
   . /etc/profile.d/vte.sh
 fi
 BASHRC_VTE
-  # Ownership of ~/.bashrc is corrected in scripts/95-permissions.sh.
+  # Ownership of ~/.bashrc is corrected in scripts/55-permissions.sh.
 fi

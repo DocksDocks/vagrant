@@ -61,4 +61,4 @@ ln -sf ../vbox-clipboard-unlock-watchdog.service \
 # one-shot helpers that don't need supervision.
 fetch_asset vboxclient-session.desktop /home/vagrant/.config/autostart/vboxclient-session.desktop
 
-# Ownership of /home/vagrant/* is corrected in scripts/95-permissions.sh.
+# Ownership of /home/vagrant/* is corrected in scripts/55-permissions.sh.

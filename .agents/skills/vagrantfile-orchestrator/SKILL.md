@@ -7,7 +7,7 @@ metadata:
   source_files:
     - "Vagrantfile"
     - "plans/0002-split-vagrantfile.md"
-  updated: "2026-05-03"
+  updated: "2026-05-13"
 ---
 
 # Vagrantfile Orchestrator
@@ -70,13 +70,13 @@ SCRIPTS = %w[
   41-xfce-theme
   50-vboxclient-supervisor
   51-vbox-autoresize
+  55-permissions
   60-apps-tilix-mousepad
   65-superfile-fonts
   70-nodejs-claude
   80-git-ssh-lazygit
   85-secrets-env
   90-claude-config-sync
-  95-permissions
   99-finalize
 ]
 ```

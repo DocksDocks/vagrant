@@ -17,13 +17,13 @@ metadata:
     - "scripts/65-superfile-fonts.sh"
     - "scripts/70-nodejs-claude.sh"
     - "scripts/80-git-ssh-lazygit.sh"
+    - "scripts/55-permissions.sh"
     - "scripts/85-secrets-env.sh"
     - "scripts/90-claude-config-sync.sh"
-    - "scripts/95-permissions.sh"
     - "scripts/99-finalize.sh"
     - "plans/0002-split-vagrantfile.md"
     - "README.md"
-  updated: "2026-05-11"
+  updated: "2026-05-13"
 ---
 
 # Provisioning Script Conventions
@@ -47,12 +47,12 @@ Never call `systemctl --user enable` during provisioning — no active user mana
 ## When to Use
 
 - Adding a new script to the `SCRIPTS` array in Vagrantfile.
-- Deciding a numbered slot for a new script (gaps: 25, 35, 45, 55, 75 are free).
+- Deciding a numbered slot for a new script (gaps: 25, 35, 45, 75, 95 are free).
 - Sourcing `_lib.sh` and calling `fetch_asset` to deploy an asset.
 - Writing the mandatory 4-line preamble for any numbered script.
 - Adding an idempotent append to `~/.bashrc`.
 - Running a curl-fetched installer as root (Composer pattern).
-- Understanding why `95-permissions.sh` chown-sweeps `/home/vagrant`.
+- Understanding why `55-permissions.sh` chown-sweeps `/home/vagrant` between system-config and user-install phases.
 
 ## Core Patterns
 
@@ -101,7 +101,7 @@ See references/fetch-asset-helper.md for semantics.
 
 | Current slots | Free gaps (can insert here) |
 |---|---|
-| 10, 20, 30, 40, 41, 50, 51, 60, 65, 70, 80, 85, 90, 95, 99 | 25, 35, 45, 55, 75 |
+| 10, 20, 30, 40, 41, 50, 51, 55, 60, 65, 70, 80, 85, 90, 99 | 25, 35, 45, 75, 95 |
 
 Gaps are cosmetic — Vagrant executes in `SCRIPTS` array declaration order, not filename order. Source: `plans/0002-split-vagrantfile.md:44`.
 
@@ -112,7 +112,8 @@ SCRIPTS = %w[
   10-apt-repos
   20-packages
   # ... add new entry in sorted position ...
-  95-permissions
+  55-permissions
+  # ... user-install scripts (60, 65, 70, 80, 85, 90) follow the sweep ...
   99-finalize
 ]
 ```
@@ -146,13 +147,13 @@ fi
 
 Source: `scripts/85-secrets-env.sh:50-55`. The marker string is the script filename in the comment — unique per script.
 
-### 95-permissions.sh catch-all chown
+### 55-permissions.sh catch-all chown
 
 ```bash
 chown -R vagrant:vagrant /home/vagrant
 ```
 
-Source: `scripts/95-permissions.sh:16`. All scripts before 95 run as root and write to `/home/vagrant/` without per-file chown. The final sweep centralizes ownership correction. Do not add per-file chown calls — note the comment `# Ownership of /home/vagrant/* is corrected in scripts/95-permissions.sh.` used throughout.
+Source: `scripts/55-permissions.sh:16`. Scripts 40, 41, 50, 51 run as root and create root-owned directories under `/home/vagrant/{.config,.local,...}`; scripts 60+ run as the vagrant user (via `su - vagrant -c` / `runuser`) and need to write **into** those directories. The sweep runs **between** the two phases so user-phase writes don't EACCES. Do not add per-file chown calls — note the comment `# Ownership of /home/vagrant/* is corrected in scripts/55-permissions.sh.` used throughout. Why position 55 and not the trailing 95 it once occupied: a single late sweep crashed `vagrant up` because script 90 (`90-claude-config-sync.sh` → `sync.sh` rtk installer) tries to `mv ... ~/.local/bin/rtk` and hits EACCES before the chown can fire. Running the sweep before 60 fixes both that crash and the silent Claude Code install failure inside script 70.
 
 ### apt dpkg force-conf fragment
 
@@ -169,9 +170,9 @@ Source: `assets/apt/99force-conf:1-4`, installed by `scripts/10-apt-repos.sh:13`
 
 - **`set -euo pipefail` is non-negotiable**: any failing command aborts provisioning immediately with a visible error. Commands that can fail must use `|| true`. Source: `scripts/10-apt-repos.sh:3`.
 - **VAGRANT_LIB_PATH fallback `/vagrant/scripts/_lib.sh`**: allows running a script standalone in local-dev mode without the Vagrantfile setting the env var. Source: `scripts/40-xfce-base.sh:9-10`.
-- **`95-permissions.sh` is the single ownership sweep**: earlier scripts do not chown individual files, enabling them to run as root without tracking what they wrote. Source: `scripts/95-permissions.sh:16`.
+- **`55-permissions.sh` is the single ownership sweep**: earlier scripts (40, 41, 50, 51) do not chown individual files, enabling them to run as root without tracking what they wrote; the sweep runs once at position 55, before the user-tool-install phase (60–90) consumes those dirs. Source: `scripts/55-permissions.sh:16`.
 - **`FORCE_REINSTALL` bypass**: the three heavy scripts (30, 65, 70) check `${FORCE_REINSTALL:-0}` and skip if the tool is already installed; `FORCE_REINSTALL=1 vagrant provision` overrides all three. Source: `scripts/30-guest-additions.sh:12-16`.
-- **Numbered gaps are intentional**: 25, 35, 45, 55, 75 are available for future scripts without renaming existing ones. Source: `plans/0002-split-vagrantfile.md:44`.
+- **Numbered gaps are intentional**: 25, 35, 45, 75, 95 are available for future scripts without renaming existing ones. Source: `plans/0002-split-vagrantfile.md:44`.
 
 ## Gotchas
 
