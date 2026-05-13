@@ -192,13 +192,13 @@ Then run `vagrant reload` to apply.
 │   ├── 41-xfce-theme.sh
 │   ├── 50-vboxclient-supervisor.sh
 │   ├── 51-vbox-autoresize.sh
+│   ├── 55-permissions.sh
 │   ├── 60-apps-tilix-mousepad.sh
 │   ├── 65-superfile-fonts.sh
 │   ├── 70-nodejs-claude.sh
 │   ├── 80-git-ssh-lazygit.sh
 │   ├── 85-secrets-env.sh
 │   ├── 90-claude-config-sync.sh
-│   ├── 95-permissions.sh
 │   └── 99-finalize.sh
 ├── assets/             # XFCE/Tilix/Chrome configs, systemd units, helper scripts
 ├── plans/              # design docs (clipboard supervisor, Vagrantfile split)

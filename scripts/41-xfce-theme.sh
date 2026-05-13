@@ -19,7 +19,7 @@ mkdir -p /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml
 fetch_asset xsettings.xml       /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
 fetch_asset xfwm4.xml           /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml
 
-# Ownership of /home/vagrant/* is corrected in scripts/95-permissions.sh.
+# Ownership of /home/vagrant/* is corrected in scripts/55-permissions.sh.
 
 # ── Tilix CloseDialog icon overlay ──────────────────────
 # Papirus-Dark inherits from `breeze-dark,hicolor` — NOT from Papirus — so
@@ -42,6 +42,6 @@ ln -sfn "$ICON_SRC/64x64/apps/utilities-terminal.svg" \
         "$ICON_DST/scalable/apps/utilities-terminal.svg"
 # index.theme is required for `gtk-update-icon-cache` to write a valid cache.
 [ -e "$ICON_DST/index.theme" ] || cp /usr/share/icons/hicolor/index.theme "$ICON_DST/"
-# Run as root so we don't need a mid-script chown — 95-permissions.sh sweeps
+# Run as root so we don't need a mid-script chown — 55-permissions.sh sweeps
 # /home/vagrant at the end of provisioning.
 gtk-update-icon-cache -q -f "$ICON_DST" >/dev/null 2>&1 || true

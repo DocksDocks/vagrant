@@ -6,7 +6,7 @@ metadata:
   pattern: tool-wrapper
   source_files:
     - "scripts/85-secrets-env.sh"
-  updated: "2026-05-03"
+  updated: "2026-05-13"
 ---
 
 # Secrets-Env Convention
@@ -89,7 +89,7 @@ fi
 
 ## Key Decisions
 
-- **Mode 0600 set at creation time**: ownership is corrected by `scripts/95-permissions.sh` (the chown sweep), but mode must be 0600 from the moment the file exists — regardless of when 95-permissions.sh runs. Source: `scripts/85-secrets-env.sh:29-30`.
+- **Mode 0600 set at creation time**: ownership is corrected by `scripts/55-permissions.sh` (the chown sweep), but mode must be 0600 from the moment the file exists — regardless of when 55-permissions.sh runs. Source: `scripts/85-secrets-env.sh:29-30`.
 - **`[ -r FILE ] && . FILE` not `source FILE`**: `source` (bash builtin) is not POSIX; the dot-source with `-r` guard works in any POSIX shell and handles a missing file gracefully.
 - **`~/.config/` at 0700**: the directory itself is restricted so other users cannot enumerate its contents even if they cannot read individual files.
 - **Never sourced at system level**: `~/.config/secrets.env` is only sourced by `~/.bashrc` — not by `/etc/environment`, `/etc/profile`, or any system-level file. Secrets are vagrant-user-scoped only.
@@ -109,7 +109,7 @@ Source: `scripts/85-secrets-env.sh:3-13` (comment block).
 
 **Secret not available in a new shell**: the `[ -r FILE ] && . FILE` line is in `~/.bashrc`, which is only sourced for interactive non-login shells. Login shells source `~/.bash_profile` (which on Debian typically sources `~/.bashrc` via `if [ -f ~/.bashrc ]; then . ~/.bashrc; fi`). If a secret is missing in a login shell, check `~/.bash_profile` sources `~/.bashrc`.
 
-**mode 0600 lost after `vagrant provision`**: `scripts/95-permissions.sh` runs `chown -R vagrant:vagrant /home/vagrant` but does NOT change modes. Mode 0600 set during scaffolding is preserved. However, if a downstream script writes to the file with a umask that sets 0644, run `chmod 0600 ~/.config/secrets.env` to fix.
+**mode 0600 lost after `vagrant provision`**: `scripts/55-permissions.sh` runs `chown -R vagrant:vagrant /home/vagrant` but does NOT change modes. Mode 0600 set during scaffolding is preserved. However, if a downstream script writes to the file with a umask that sets 0644, run `chmod 0600 ~/.config/secrets.env` to fix.
 
 **Multiple downstream tools appending the same key**: `~/.config/secrets.env` has no deduplication — if two scripts append `export GITHUB_TOKEN=...`, both values are set in sequence and the last one wins (bash source executes top-to-bottom). Keep one canonical source of each key.
 

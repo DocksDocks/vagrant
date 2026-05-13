@@ -26,7 +26,7 @@ SECRETS_FILE="$USER_HOME/.config/secrets.env"
 BASHRC="$USER_HOME/.bashrc"
 
 # 1. Placeholder file (don't clobber an existing one). Ownership is set by
-# scripts/95-permissions.sh; mode 0600 must be set here so the file is locked
+# scripts/55-permissions.sh; mode 0600 must be set here so the file is locked
 # down from the moment it exists, regardless of when 95- runs.
 if [[ ! -e "$SECRETS_FILE" ]]; then
   install -d -m 0700 "$USER_HOME/.config"
@@ -46,7 +46,7 @@ fi
 
 # 2. Idempotent source-line append to ~/.bashrc. The marker is the script
 # filename in the comment — uniquely identifies our block on re-provision.
-# Ownership is corrected in scripts/95-permissions.sh.
+# Ownership is corrected in scripts/55-permissions.sh.
 if ! grep -qF '85-secrets-env.sh' "$BASHRC" 2>/dev/null; then
   cat >> "$BASHRC" <<'BASHRC_SECRETS'
 
