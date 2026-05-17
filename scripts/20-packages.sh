@@ -12,7 +12,7 @@ apt-get install -y -qq \
   php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \
   xfce4 \
   xfce4-notifyd xfce4-screenshooter \
-  xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-taskmanager mousepad \
+  xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-pulseaudio-plugin xfce4-taskmanager mousepad \
   lightdm lightdm-gtk-greeter \
   dbus-x11 xdg-utils xclip \
   pulseaudio alsa-utils \

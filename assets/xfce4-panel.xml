@@ -2,61 +2,44 @@
 <channel name="xfce4-panel" version="1.0">
   <property name="configver" type="int" value="2"/>
   <property name="panels" type="array">
-    <value type="int" value="1"/>
     <value type="int" value="2"/>
-    <property name="panel-1" type="empty">
-      <property name="position" type="string" value="p=6;x=0;y=0"/>
-      <property name="position-locked" type="bool" value="true"/>
-      <property name="size" type="uint" value="28"/>
-      <property name="length" type="uint" value="100"/>
-      <property name="length-adjust" type="bool" value="false"/>
-      <property name="icon-size" type="uint" value="16"/>
-      <property name="plugin-ids" type="array">
-        <value type="int" value="1"/>
-        <value type="int" value="2"/>
-        <value type="int" value="3"/>
-        <value type="int" value="4"/>
-        <value type="int" value="5"/>
-      </property>
-    </property>
     <property name="panel-2" type="empty">
       <property name="position" type="string" value="p=12;x=0;y=0"/>
       <property name="position-locked" type="bool" value="true"/>
       <property name="size" type="uint" value="48"/>
       <property name="length" type="uint" value="100"/>
       <property name="length-adjust" type="bool" value="false"/>
-      <property name="icon-size" type="uint" value="32"/>
+      <property name="icon-size" type="uint" value="22"/>
       <property name="plugin-ids" type="array">
+        <value type="int" value="1"/>
         <value type="int" value="9"/>
         <value type="int" value="10"/>
         <value type="int" value="11"/>
+        <value type="int" value="5"/>
+        <value type="int" value="13"/>
+        <value type="int" value="3"/>
+        <value type="int" value="12"/>
       </property>
     </property>
   </property>
 
   <property name="plugins" type="empty">
+    <!-- Single bottom panel: whiskermenu (left) + expanding-separator +
+         docklike + expanding-separator + systray + clock (right). -->
     <property name="plugin-1" type="string" value="whiskermenu"/>
 
-    <property name="plugin-2" type="string" value="separator">
-      <property name="expand" type="bool" value="true"/>
-      <property name="style" type="uint" value="0"/>
-    </property>
-
     <property name="plugin-3" type="string" value="clock">
-      <property name="digital-format" type="string" value="%a %d %b  %H:%M"/>
       <property name="mode" type="uint" value="2"/>
-    </property>
-
-    <property name="plugin-4" type="string" value="separator">
-      <property name="expand" type="bool" value="true"/>
-      <property name="style" type="uint" value="0"/>
+      <!-- Two-line Windows-style layout: time on top, date below. -->
+      <property name="digital-layout" type="uint" value="1"/>
+      <property name="digital-time-format" type="string" value="%^a  %H:%M"/>
+      <property name="digital-date-format" type="string" value="%d %B %Y"/>
     </property>
 
     <property name="plugin-5" type="string" value="systray">
       <property name="square-icons" type="bool" value="true"/>
     </property>
 
-    <!-- Panel 2: expanding separator (left) + docklike + expanding separator (right) -->
     <property name="plugin-9" type="string" value="separator">
       <property name="expand" type="bool" value="true"/>
       <property name="style" type="uint" value="0"/>
@@ -64,8 +47,18 @@
 
     <property name="plugin-10" type="string" value="docklike"/>
 
+    <property name="plugin-13" type="string" value="pulseaudio"/>
+
     <property name="plugin-11" type="string" value="separator">
       <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+
+    <!-- Trailing transparent separator — combines with the panel's
+         padding-right rule in assets/gtk.css to give the clock breathing
+         room from the screen edge. -->
+    <property name="plugin-12" type="string" value="separator">
+      <property name="expand" type="bool" value="false"/>
       <property name="style" type="uint" value="0"/>
     </property>
   </property>

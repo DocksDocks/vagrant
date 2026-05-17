@@ -5,3 +5,8 @@ headerbar button:not(.titlebutton) {
 headerbar button:not(.titlebutton):hover {
   background-image: image(alpha(currentColor, 0.22));
 }
+
+/* Right-edge breathing room for the bottom panel so the clock isn't
+   flush against the screen edge. Pairs with the trailing transparent
+   separator (plugin-12) in assets/xfce4-panel.xml. */
+#XfcePanelWindow-2 { padding-right: 16px; }

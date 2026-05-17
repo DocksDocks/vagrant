@@ -14,7 +14,7 @@ metadata:
     - "assets/xfce4-power-manager.xml"
     - "assets/tilix.dconf"
     - "assets/lightdm-gtk-greeter.conf"
-  updated: "2026-05-03"
+  updated: "2026-05-17"
 ---
 
 # XFCE Desktop Config

@@ -77,7 +77,7 @@ Works on Windows, macOS, and Linux. You can override the values by editing `vm_m
 ## Extras configured automatically
 
 - **XFCE desktop** with autologin — `vagrant up` opens directly to the desktop, no password prompt.
-- **Ubuntu-like layout** — top bar (whiskermenu, centered clock, systray) + centered bottom dock with Docklike (pinned app icons that also show open windows, like Ubuntu's dock).
+- **Single bottom panel** — whiskermenu (left), centered dock with Docklike (pinned app icons that also show open windows, like Ubuntu's dock), systray and clock (right). No top bar.
 - **Pinned dock apps** — Chrome, Thunar, Tilix, Mousepad ready with one click. Open apps merge into their dock icon.
 - **Arc-Dark theme** + **Papirus-Dark icons** + **Noto Sans font** + **DMZ-White cursor** — a clean modern dark look. Compositor enabled under VMSVGA.
 - **Bidirectional clipboard and drag-and-drop** between host and VM (supervised systemd user units; survives X-event storms).

@@ -30,7 +30,7 @@ systemctl set-default graphical.target
 # LightDM greeter com Arc-Dark + Papirus (tela de login)
 fetch_asset lightdm-gtk-greeter.conf /etc/lightdm/lightdm-gtk-greeter.conf
 
-# ── Painel XFCE (layout Ubuntu-like: top bar + bottom dock) ──
+# ── Painel XFCE (single bottom panel: whiskermenu + dock + systray + clock) ──
 # Escrito em /etc/xdg para ser usado como default no primeiro login
 mkdir -p /etc/xdg/xfce4/xfconf/xfce-perchannel-xml
 mkdir -p /etc/xdg/xfce4/panel
