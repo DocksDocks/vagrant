@@ -11,11 +11,16 @@ export DEBIAN_FRONTEND=noninteractive
 FORCE="${FORCE_REINSTALL:-0}"
 
 # ── nvm ─────────────────────────────────────────────────
+# PROFILE=/dev/null tells nvm's install.sh NOT to append its source block to
+# ~/.bashrc (nvm_detect_profile checks for exactly this sentinel). The hoist
+# step below is the single source of truth for nvm in bashrc — without this
+# flag, the installer's block would land at the END of bashrc (below the
+# interactivity guard) and we'd end up with a duplicate after the hoist runs.
 if [[ "$FORCE" != "1" ]] && [ -s /home/vagrant/.nvm/nvm.sh ]; then
   echo ">> nvm already installed — skipping (FORCE_REINSTALL=1 to redo)."
 else
   echo ">> Instalando nvm..."
-  su - vagrant -c 'curl -fsSL --retry 4 --retry-delay 2 https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash'
+  su - vagrant -c 'curl -fsSL --retry 4 --retry-delay 2 https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | PROFILE=/dev/null bash'
 fi
 
 # ── Node LTS + pnpm ─────────────────────────────────────
@@ -54,13 +59,12 @@ fi
 # shellcheck disable=SC2016  # intentional: $HOME/$PATH stay unexpanded inside ~/.bashrc
 su - vagrant -c 'grep -q "\.local/bin" ~/.bashrc 2>/dev/null || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 
-# nvm interactivity-guard hoist: nvm's installer appends its source block to
-# the END of ~/.bashrc, BELOW the Debian-default `case $- in *i*) ;; *) return;;`
-# guard. Non-interactive shells (`bash -lc 'node -v'`, IDE-spawned tooling,
-# `direnv`, hooks, CI invocations) return early and never load nvm, so node/npm
-# silently resolve to "command not found". Fix: insert the same trio above the
-# guard, marker-guarded for idempotency. The installer's bottom block stays —
-# sourcing nvm twice for interactive shells is a no-op.
+# nvm interactivity-guard hoist: insert the nvm source trio ABOVE the
+# Debian-default `case $- in *i*) ;; *) return;;` guard so non-interactive
+# shells (`bash -lc 'node -v'`, IDE-spawned tooling, direnv, hooks, CI
+# invocations) can resolve node/npm. Combined with PROFILE=/dev/null on the
+# install step above, this is the sole place ~/.bashrc sources nvm.
+# Marker-guarded for idempotency.
 su - vagrant <<'NVM_HOIST'
 set -euo pipefail
 bashrc="$HOME/.bashrc"
