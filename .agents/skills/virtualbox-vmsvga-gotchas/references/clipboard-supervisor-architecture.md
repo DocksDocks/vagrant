@@ -87,6 +87,24 @@ Source: `assets/vbox-clipboard-unlock-watchdog.sh:16-27`
 
 On screen-unlock, the X session re-grabs display resources and the restarted clipboard helper (from `Restart=always`) can lose the race. Kicking it again 1s after `ActiveChanged=false` clears that window. Only activates if screen locking is re-enabled by the user — screen lock is disabled by default.
 
+## Layer 5 (Belt-and-Braces): Periodic Healthcheck Timer
+
+```bash
+since=$(systemctl --user show -p ActiveEnterTimestamp --value vbox-clipboard.service)
+if journalctl --user -u vbox-clipboard.service --since "$since" --no-pager \
+   | grep -q "VBox formats 'NONE'"; then
+  systemctl --user restart vbox-clipboard.service vbox-draganddrop.service
+fi
+```
+
+Source: `assets/vbox-clipboard-healthcheck.sh:14-23`, fired by `vbox-clipboard-healthcheck.timer` (`OnBootSec=2min`, `OnUnitActiveSec=2min`).
+
+Catches a **distinct failure mode** from Layers 1-4: the helper process stays alive (so `Restart=always` never fires) but its HGCM↔X11 bridge silently dies, logging `Converting VBox formats 'NONE' to ... rc=VERR_NOT_SUPPORTED` whenever a guest app requests clipboard content. Layer 4's D-Bus watchdog needs a screen-unlock event, and on this box `light-locker.desktop` is shadowed (`Hidden=true`, `scripts/40-xfce-base.sh`) so that signal never arrives.
+
+The `--since=ActiveEnterTimestamp` filter is what keeps the timer idempotent: after a restart the journal-since-ActiveEnter window is empty, so subsequent ticks early-exit at the `grep -q` with no restart. No state file, no cursor file. Source: `plans/0004-clipboard-healthcheck-timer.md`.
+
+Why a timer rather than a `journalctl -f` tail: oneshot + `--since` is stateless and survives systemd restarts cleanly; a long-running tail would need its own cursor file or risk re-reacting to stale entries.
+
 ## Verification Steps
 
 ```bash

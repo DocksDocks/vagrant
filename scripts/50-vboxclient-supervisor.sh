@@ -14,6 +14,7 @@ export DEBIAN_FRONTEND=noninteractive
 mkdir -p /home/vagrant/.config/autostart \
          /home/vagrant/.config/systemd/user \
          /home/vagrant/.config/systemd/user/default.target.wants \
+         /home/vagrant/.config/systemd/user/timers.target.wants \
          /home/vagrant/.local/bin
 
 # Remove the pre-fix VBoxClient-all autostart (superseded by supervised units)
@@ -47,6 +48,19 @@ chmod 0755 /home/vagrant/.local/bin/vbox-clipboard-unlock-watchdog
 fetch_asset systemd/vbox-clipboard-unlock-watchdog.service \
   /home/vagrant/.config/systemd/user/vbox-clipboard-unlock-watchdog.service
 
+# Periodic healthcheck timer: catches the same bug without needing a lock
+# event. The watchdog above only fires on D-Bus ScreenSaver ActiveChanged,
+# and on this box light-locker is shadowed (Hidden=true) so that signal
+# never arrives — leaving a silently-broken HGCM<->X11 bridge sitting
+# broken forever. The timer scans the clipboard unit's own journal every
+# 2 min for "VBox formats 'NONE'" and restarts on hit. See plans/0004.
+fetch_asset vbox-clipboard-healthcheck.sh /home/vagrant/.local/bin/vbox-clipboard-healthcheck
+chmod 0755 /home/vagrant/.local/bin/vbox-clipboard-healthcheck
+fetch_asset systemd/vbox-clipboard-healthcheck.service \
+  /home/vagrant/.config/systemd/user/vbox-clipboard-healthcheck.service
+fetch_asset systemd/vbox-clipboard-healthcheck.timer \
+  /home/vagrant/.config/systemd/user/vbox-clipboard-healthcheck.timer
+
 # Enable the user units by creating the WantedBy symlinks directly
 # (avoids needing XDG_RUNTIME_DIR / an active user manager during provision)
 ln -sf ../vbox-clipboard.service \
@@ -55,6 +69,8 @@ ln -sf ../vbox-draganddrop.service \
   /home/vagrant/.config/systemd/user/default.target.wants/vbox-draganddrop.service
 ln -sf ../vbox-clipboard-unlock-watchdog.service \
   /home/vagrant/.config/systemd/user/default.target.wants/vbox-clipboard-unlock-watchdog.service
+ln -sf ../vbox-clipboard-healthcheck.timer \
+  /home/vagrant/.config/systemd/user/timers.target.wants/vbox-clipboard-healthcheck.timer
 
 # XDG autostart: import DISPLAY/XAUTHORITY into the user manager, ensure
 # the supervised services are running for this session, and launch the

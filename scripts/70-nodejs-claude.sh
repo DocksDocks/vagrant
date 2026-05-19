@@ -53,3 +53,30 @@ fi
 # PATH hint for ~/.local/bin (idempotent — only appends once)
 # shellcheck disable=SC2016  # intentional: $HOME/$PATH stay unexpanded inside ~/.bashrc
 su - vagrant -c 'grep -q "\.local/bin" ~/.bashrc 2>/dev/null || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
+
+# nvm interactivity-guard hoist: nvm's installer appends its source block to
+# the END of ~/.bashrc, BELOW the Debian-default `case $- in *i*) ;; *) return;;`
+# guard. Non-interactive shells (`bash -lc 'node -v'`, IDE-spawned tooling,
+# `direnv`, hooks, CI invocations) return early and never load nvm, so node/npm
+# silently resolve to "command not found". Fix: insert the same trio above the
+# guard, marker-guarded for idempotency. The installer's bottom block stays —
+# sourcing nvm twice for interactive shells is a no-op.
+su - vagrant <<'NVM_HOIST'
+set -euo pipefail
+bashrc="$HOME/.bashrc"
+marker="# 70-nodejs-claude.sh nvm-hoist"
+if [ -f "$bashrc" ] && ! grep -qF "$marker" "$bashrc"; then
+  tmp=$(mktemp)
+  awk -v m="$marker" '
+    /^# If not running interactively/ && !done {
+      print m
+      print "export NVM_DIR=\"$HOME/.nvm\""
+      print "[ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\""
+      print "[ -s \"$NVM_DIR/bash_completion\" ] && . \"$NVM_DIR/bash_completion\""
+      print ""
+      done = 1
+    }
+    { print }
+  ' "$bashrc" > "$tmp" && mv "$tmp" "$bashrc"
+fi
+NVM_HOIST

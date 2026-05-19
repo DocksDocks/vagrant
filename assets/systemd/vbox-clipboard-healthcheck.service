@@ -1,0 +1,7 @@
+[Unit]
+Description=VBox shared clipboard bridge health probe (Oracle #5266 / #19234)
+After=vbox-clipboard.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/vbox-clipboard-healthcheck
