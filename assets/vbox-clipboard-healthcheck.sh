@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # vbox-clipboard-healthcheck.sh — detect Oracle VirtualBox bug #5266 / #19234
-# (VBoxClient --clipboard stays alive but its HGCM<->X11 bridge silently dies,
-# logging "Converting VBox formats 'NONE' to ..." VERR_NOT_SUPPORTED) and
-# restart the supervised helpers to re-establish the bridge.
+# (VBoxClient --clipboard stays alive but its HGCM<->X11 bridge silently dies)
+# and restart the supervised helpers to re-establish the bridge.
+#
+# Two sister signatures, both VERR_NOT_SUPPORTED:
+#   - "Converting VBox formats 'NONE' to ..."        (source-side dead)
+#   - "Converting VBox formats '<X>' to 'INVALID' ..."  (X11-side dead, fmtX11=0)
+# Both indicate a bridge that needs restarting.
 #
 # Triggered every 2 minutes by vbox-clipboard-healthcheck.timer. Required
 # because the existing vbox-clipboard-unlock-watchdog.service only kicks on
@@ -18,7 +22,7 @@ since=$(systemctl --user show -p ActiveEnterTimestamp --value \
 
 if journalctl --user -u vbox-clipboard.service \
      --since "$since" --no-pager 2>/dev/null \
-   | grep -q "VBox formats 'NONE'"; then
+   | grep -qE "VBox formats 'NONE'|to 'INVALID' for X11"; then
   systemctl --user restart \
     vbox-clipboard.service vbox-draganddrop.service
 fi

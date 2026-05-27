@@ -53,7 +53,8 @@ fetch_asset systemd/vbox-clipboard-unlock-watchdog.service \
 # and on this box light-locker is shadowed (Hidden=true) so that signal
 # never arrives — leaving a silently-broken HGCM<->X11 bridge sitting
 # broken forever. The timer scans the clipboard unit's own journal every
-# 2 min for "VBox formats 'NONE'" and restarts on hit. See plans/0004.
+# 2 min for the degraded-bridge signature (formats 'NONE' or to 'INVALID')
+# and restarts on hit. See plans/0004.
 fetch_asset vbox-clipboard-healthcheck.sh /home/vagrant/.local/bin/vbox-clipboard-healthcheck
 chmod 0755 /home/vagrant/.local/bin/vbox-clipboard-healthcheck
 fetch_asset systemd/vbox-clipboard-healthcheck.service \

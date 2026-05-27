@@ -11,7 +11,7 @@ never fires) but its HGCM↔X11 bridge silently degrades after hours of
 uptime. Symptom in the guest: `xclip -selection clipboard -o` returns
 `Error: target STRING not available`, `xprop _NET_SELECTION_OWNER_CLIPBOARD`
 reports "no such atom", and `journalctl --user -u vbox-clipboard.service`
-fills with `Converting VBox formats 'NONE' to '<target>' for X11 ... rc=VERR_NOT_SUPPORTED`.
+fills with `Converting VBox formats 'NONE' to '<target>' for X11 ... rc=VERR_NOT_SUPPORTED` (source-side dead) or its sister signature `Converting VBox formats '<X>' to 'INVALID' for X11 (fmtX11=0) ... rc=VERR_NOT_SUPPORTED` (X11-side dead). Both indicate the same degraded bridge.
 Observed on this box after ~11 h uptime with the helper still showing
 `Active: active (running)` and `NRestarts=0`.
 
@@ -44,7 +44,7 @@ Add a `systemd --user` timer (`vbox-clipboard-healthcheck.timer`,
 `OnBootSec=2min`, `OnUnitActiveSec=2min`) that fires a oneshot service
 which runs `~/.local/bin/vbox-clipboard-healthcheck`. The script scans
 the clipboard unit's own journal **since its `ActiveEnterTimestamp`** for
-the `VBox formats 'NONE'` signature; on hit, it restarts both
+the degraded-bridge signature — either `VBox formats 'NONE'` or `to 'INVALID' for X11`; on hit, it restarts both
 `vbox-clipboard.service` and `vbox-draganddrop.service`. After a restart
 the journal-since-ActiveEnter window is empty, so the next tick is a
 no-op — no restart loop possible.

@@ -92,14 +92,14 @@ On screen-unlock, the X session re-grabs display resources and the restarted cli
 ```bash
 since=$(systemctl --user show -p ActiveEnterTimestamp --value vbox-clipboard.service)
 if journalctl --user -u vbox-clipboard.service --since "$since" --no-pager \
-   | grep -q "VBox formats 'NONE'"; then
+   | grep -qE "VBox formats 'NONE'|to 'INVALID' for X11"; then
   systemctl --user restart vbox-clipboard.service vbox-draganddrop.service
 fi
 ```
 
 Source: `assets/vbox-clipboard-healthcheck.sh:14-23`, fired by `vbox-clipboard-healthcheck.timer` (`OnBootSec=2min`, `OnUnitActiveSec=2min`).
 
-Catches a **distinct failure mode** from Layers 1-4: the helper process stays alive (so `Restart=always` never fires) but its HGCM↔X11 bridge silently dies, logging `Converting VBox formats 'NONE' to ... rc=VERR_NOT_SUPPORTED` whenever a guest app requests clipboard content. Layer 4's D-Bus watchdog needs a screen-unlock event, and on this box `light-locker.desktop` is shadowed (`Hidden=true`, `scripts/40-xfce-base.sh`) so that signal never arrives.
+Catches a **distinct failure mode** from Layers 1-4: the helper process stays alive (so `Restart=always` never fires) but its HGCM↔X11 bridge silently dies. Two sister signatures, both `VERR_NOT_SUPPORTED`: `Converting VBox formats 'NONE' to <X>` (source-side empty) or `Converting VBox formats <X> to 'INVALID'` with `fmtX11=0` (X11-side has no valid target). Either appears whenever a guest app requests clipboard content over the dead bridge. Layer 4's D-Bus watchdog needs a screen-unlock event, and on this box `light-locker.desktop` is shadowed (`Hidden=true`, `scripts/40-xfce-base.sh`) so that signal never arrives.
 
 The `--since=ActiveEnterTimestamp` filter is what keeps the timer idempotent: after a restart the journal-since-ActiveEnter window is empty, so subsequent ticks early-exit at the `grep -q` with no restart. No state file, no cursor file. Source: `plans/0004-clipboard-healthcheck-timer.md`.
 
