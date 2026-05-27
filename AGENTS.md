@@ -4,7 +4,7 @@ Canonical instructions for coding agents working on this project — compatible 
 
 ## Project Overview
 
-This repository provisions a complete Debian 13 (Trixie, stable) development VM with XFCE desktop on VirtualBox. The `Vagrantfile` is thin (~200 lines) and delegates each concern to a numbered shell script under `scripts/`, with static configs under `assets/`. Scripts are fetched from `raw.githubusercontent.com/${SCRIPTS_REPO}/${SCRIPTS_REF}/scripts/` at provision time, or read from `/vagrant/assets/` if `VAGRANT_SCRIPTS_DIR` is set (local-dev mode). See `plans/0002-split-vagrantfile.md` for the design rationale.
+This repository provisions a complete Debian 13 (Trixie, stable) development VM with XFCE desktop on VirtualBox. The `Vagrantfile` is thin (~300 lines) and delegates each concern to a numbered shell script under `scripts/`, with static configs under `assets/`. Scripts are fetched from `raw.githubusercontent.com/${SCRIPTS_REPO}/${SCRIPTS_REF}/scripts/` at provision time, or read from `/vagrant/assets/` if `VAGRANT_SCRIPTS_DIR` is set (local-dev mode). See `plans/0002-split-vagrantfile.md` for the design rationale.
 
 ## Key Technical Details
 
@@ -18,10 +18,10 @@ This repository provisions a complete Debian 13 (Trixie, stable) development VM 
 
 ## Architecture
 
-The `Vagrantfile` (~200 lines) handles host-side resource detection and the VirtualBox config, then iterates `SCRIPTS = %w[...]` and registers one shell provisioner per script. Each provisioner either runs the local file (`VAGRANT_SCRIPTS_DIR=./scripts`) or fetches it from `raw.githubusercontent.com` at run time.
+The `Vagrantfile` (~300 lines) handles host-side resource detection and the VirtualBox config, then iterates `SCRIPTS = %w[...]` and registers one shell provisioner per script. Each provisioner either runs the local file (`VAGRANT_SCRIPTS_DIR=./scripts`) or fetches it from `raw.githubusercontent.com` at run time.
 
-1. **Host detection** (Vagrantfile lines 1-60): Auto-detect RAM/CPUs/audio driver, with the 16 GB / 8-core carve-out documented inline.
-2. **VirtualBox config** (Vagrantfile lines 96-110): VM resources, VMSVGA graphics, bidirectional clipboard, drag-and-drop, audio.
+1. **Host detection + resource-profile menu** (Vagrantfile lines 1-196): Auto-detect RAM/CPUs/audio driver, then offer an interactive 5-tier profile menu on `vagrant up`/`reload` — an arrow-key TUI (↑/↓/`j`/`k` to move, Enter to confirm, `q`/Esc to cancel) rendered on the alternate screen. Tiers scale from a 16 GB / 8-core reference (`5.0 / 6.5 / 8.0 / 9.5 / 11.0 GB`, `4 / 5 / 6 / 6 / 6 vCPU`) and are hard-capped at 75% of host RAM and CPUs. The last choice is persisted to `.vagrant/last_profile` and pre-selected next time. Non-interactive invocations (status, ssh, provision, CI, non-tty stdin) silently use the remembered tier or `DEFAULT_TIER=2`; `VM_PROFILE=1..5` is a one-shot override that skips the menu without changing the saved choice.
+2. **VirtualBox config** (Vagrantfile lines 235-249): VM resources, VMSVGA graphics, bidirectional clipboard, drag-and-drop, audio.
 3. **Per-concern shell scripts** (`scripts/`):
    - `10-apt-repos.sh` — system update, timezone, grub-pc seed, external repos (Chrome, Docker, gh).
    - `20-packages.sh` — batch `apt install`, Composer (with SHA-384 verification), docker group, vagrant password.

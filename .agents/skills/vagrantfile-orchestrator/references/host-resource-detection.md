@@ -1,84 +1,115 @@
 # Host Resource Detection (Vagrantfile)
 
 <constraint>
-The 16 GB / 8-CPU carve-out (host_ram 14000-24000 AND host_cpus 6-9 → 6656 MB / 4 vCPU) MUST be preserved. Without it, those hosts allocate ~10 GB to the VM and starve host Chrome, Claude, and other apps.
+Every resolved tier MUST stay ≤75% of host RAM and ≤75% of host CPUs
+(`ram_cap`/`cpu_cap`), and RAM MUST be a multiple of 256 MB (VMSVGA framebuffer
+alignment). Without the 75% cap a high tier on a small host starves host
+Chrome/Claude; without the 256 MB rounding VirtualBox silently clamps the value.
 </constraint>
 
-## Implementation
+## Host detection
 
 ```ruby
-require 'rbconfig'
-HOST_OS = RbConfig::CONFIG['host_os']
+def detect_host_memory_mb   # darwin: sysctl hw.memsize; linux: /proc/meminfo;
+  ...                       # mswin: powershell TotalPhysicalMemory; else 8192
+def detect_host_cpus        # darwin: hw.ncpu; linux: nproc;
+  ...                       # mswin: NUMBER_OF_PROCESSORS; else 2
+```
 
-def detect_host_memory_mb
-  if HOST_OS =~ /darwin/i
-    `sysctl -n hw.memsize`.to_i / 1024 / 1024
-  elsif HOST_OS =~ /linux/i
-    `grep MemTotal /proc/meminfo`.split[1].to_i / 1024
-  elsif HOST_OS =~ /mswin|mingw|cygwin/i
-    `powershell -Command "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"`.strip.to_i / 1024 / 1024
-  else
-    8192
-  end
-end
+Source: `Vagrantfile:14-36`. `detect_audio_driver` (`Vagrantfile:38-48`) maps
+OS → audio driver; unchanged by the profile rework.
 
-def detect_host_cpus
-  if HOST_OS =~ /darwin/i
-    `sysctl -n hw.ncpu`.to_i
-  elsif HOST_OS =~ /linux/i
-    `nproc`.to_i
-  elsif HOST_OS =~ /mswin|mingw|cygwin/i
-    ENV['NUMBER_OF_PROCESSORS'].to_i
-  else
-    2
-  end
-end
+## 5-tier resource profile (math unchanged)
 
-def detect_audio_driver
-  if HOST_OS =~ /mswin|mingw|cygwin/i
-    "dsound"
-  elsif HOST_OS =~ /darwin/i
-    "coreaudio"
-  elsif HOST_OS =~ /linux/i
-    "pulse"
-  else
-    "none"
+```ruby
+RAM_TIER_PCT = [0.3125, 0.40625, 0.5, 0.59375, 0.6875].freeze
+CPU_TIER_PCT = [0.5, 0.625, 0.75, 0.75, 0.75].freeze
+DEFAULT_TIER = 2  # base-1; 6.5 GB / 5 vCPU on a 16 GB / 8-core host
+
+def build_profiles(host_ram, host_cpus)
+  ram_cap = (host_ram  * 0.75).floor
+  cpu_cap = [(host_cpus * 0.75).floor, 1].max
+  RAM_TIER_PCT.each_index.map do |i|
+    mem = (host_ram * RAM_TIER_PCT[i] / 256).round * 256
+    mem = [[mem, 2048].max, ram_cap].min
+    cpu = [[(host_cpus * CPU_TIER_PCT[i]).round, 1].max, cpu_cap].min
+    [mem, cpu]
   end
 end
 ```
 
-Source: `Vagrantfile:9-47`
+Source: `RAM_TIER_PCT`/`CPU_TIER_PCT`/`DEFAULT_TIER` at `Vagrantfile:61-63`,
+`build_profiles` at `Vagrantfile:69-79`. Each tier scales off host totals, rounds
+RAM to 256 MB, then clamps RAM to `[2048, ram_cap]` and CPU to `[1, cpu_cap]`
+(caps = 75% of host, floored). These percentages, the rounding, the 75% cap, and
+`DEFAULT_TIER` are unchanged from the original numbered-prompt version.
 
-## Resource Allocation Formula
+## Persistence (`.vagrant/last_profile`)
 
 ```ruby
-host_ram  = detect_host_memory_mb
-host_cpus = detect_host_cpus
-
-vm_memory, vm_cpus =
-  if host_ram >= 14000 && host_ram < 24000 && host_cpus >= 6 && host_cpus <= 9
-    [6656, 4]
-  else
-    [
-      [[host_ram - 6144, 2048].max, 16384].min,
-      [[host_cpus - 2,   1   ].max, 8    ].min,
-    ]
-  end
+PROFILE_STATE_FILE = File.join(File.dirname(File.expand_path(__FILE__)),
+                               ".vagrant", "last_profile")  # Vagrantfile:67
+load_saved_tier(num_tiers)  # read+validate 1..n, rescue→nil   Vagrantfile:81-87
+save_tier(idx)              # FileUtils.mkdir_p + File.write    Vagrantfile:90-95
 ```
 
-Source: `Vagrantfile:49-60`
+The chosen tier index (1-5) is written to `.vagrant/last_profile` — machine-local
+state, gitignored via the root `.gitignore` (`.vagrant/`). `load_saved_tier`
+validates the stored value is in `1..num_tiers` (else `nil`); `save_tier` is
+best-effort (`rescue StandardError → nil`) so I/O failure never aborts the boot.
+The saved tier is both the pre-selected cursor row and the silent non-tty
+fallback.
 
-## Allocation Table
+## Resolution order (`select_profile`, `Vagrantfile:155-194`)
 
-| Host RAM | Host CPUs | VM RAM | VM CPUs | Path |
-|---|---|---|---|---|
-| 16 GB (14k-24k) | 8 (6-9) | 6.5 GB (6656 MB) | 4 | Carve-out |
-| 8 GB | 4 | 2 GB (min) | 2 | Formula |
-| 16 GB | 4 | 10 GB | 2 | Formula |
-| 32 GB | 16 | 16 GB (max) | 8 (max) | Formula (clamped) |
-| Unknown OS | any | 8 GB (fallback) | 2 (fallback) | Default |
+1. `$vm_profile` memoization (`:156`) — Vagrant re-evaluates the file per command;
+   the global cache means the menu fires at most once.
+2. `VM_PROFILE=1..5` env (`:163-167`) — one-shot non-interactive override; out of
+   range falls back to `default_idx`. Does NOT write `.vagrant/last_profile`.
+3. Saved tier → `DEFAULT_TIER` (`:158-159`) — `default_idx = saved || DEFAULT_TIER`.
+4. Prompt guard (`:171-174`): the menu renders only when ARGV includes `up`/`reload`
+   AND both stdin and stdout are TTYs; every other case returns `default_idx`.
 
-## Audio Driver Mapping
+On an Integer choice → `save_tier` + use (`:184-188`); on `:cancel` →
+`abort("Cancelado…")` (exit 1, VM not started, `:189-190`); on `:failed` (raw-mode
+exception) → `default_idx` fallback (`:191-192`).
+
+## Arrow-key TUI (alternate screen, raw mode)
+
+```ruby
+render_profile_menu(...)        # Vagrantfile:99-121  alt-screen redraw + legend
+read_menu_key                   # Vagrantfile:123-132 IO.select + read_nonblock(8)
+interactive_profile_menu(...)   # Vagrantfile:134-153 raw loop, returns Int|:cancel
+```
+
+- **Enter/leave alt screen** (`:136`, `:150`): `\e[?1049h\e[?25l` on entry (alt
+  screen + hide cursor), `\e[?25h\e[?1049l` in an `ensure` block on exit — the
+  ensure guarantees the terminal is restored even on exception.
+- **Raw mode** (`:138`): `$stdin.raw do … end` from `require 'io/console'`
+  (`Vagrantfile:9`); `require 'fileutils'` (`:10`) backs `save_tier`.
+- **Atomic key read** (`:124-125`): `IO.select([$stdin])` then
+  `$stdin.read_nonblock(8)` reads a full `\e[A`/`\e[B` escape burst in one go;
+  EOF → `"q"`.
+- **Navigation** (`:142-145`): `\e[A`/`k` up, `\e[B`/`j` down, both
+  `% profiles.length` (wrap-around); `\r`/`\n` returns `cursor+1`; `q`/`\e`/`""`
+  returns `:cancel`.
+- **Highlight bar** (`:114`): the cursor row is `\e[1;97;44m ❯…\e[0m` (bold
+  bright-white on blue with a `❯` marker); other rows are plain. Tier labels show
+  `(padrão)` for `DEFAULT_TIER` and `(último)` for the saved tier (`:110-112`).
+
+## Resolved tiers (verified by running the code)
+
+| Host | Cap (75%) | T1 | T2 (default) | T3 | T4 | T5 |
+|---|---|---|---|---|---|---|
+| 16 GB / 8 CPU | 12288 MB / 6 | 5.0 GB / 4 | 6.5 GB / 5 | 8.0 GB / 6 | 9.5 GB / 6 | 11.0 GB / 6 |
+| 8 GB / 4 CPU | 6144 MB / 3 | 2.5 GB / 2 | 3.2 GB / 3 | 4.0 GB / 3 | 4.8 GB / 3 | 5.5 GB / 3 |
+| 32 GB / 16 CPU | 24576 MB / 12 | 10 GB / 8 | 13 GB / 10 | 16 GB / 12 | 19 GB / 12 | 22 GB / 12 |
+| Unknown OS | — | falls back to 8192 MB / 2 CPU host defaults, then tiered |
+
+CPU tiers 3-5 share `CPU_TIER_PCT = 0.75`, so they resolve to the same vCPU count
+(capped at the host's own 75%); only RAM keeps climbing across tiers 3-5.
+
+## Audio driver mapping
 
 | Host OS | Driver |
 |---|---|
@@ -87,14 +118,30 @@ Source: `Vagrantfile:49-60`
 | Linux | pulse |
 | Unknown | none |
 
-Source: `Vagrantfile:37-47`
+Source: `Vagrantfile:38-48`.
 
 ## Gotchas
 
-**`detect_host_memory_mb` returns 0 on unknown Linux**: if `grep MemTotal /proc/meminfo` fails or `/proc/meminfo` is absent, `.split[1].to_i` returns 0. The formula then allocates the minimum (2048 MB). This is safe — the fallback is conservative, not dangerous.
+**Higher tier does not mean more CPU**: tiers 3-5 all use 0.75 of host CPUs, so
+raising the tier past 3 only adds RAM. On a 16 GB / 8-core host every tier from 3
+up is 6 vCPU.
 
-**`nproc` not available on some Linux hosts**: returns 0, giving 1 vCPU after `[[0 - 2, 1].max]`. Add a fallback if deploying on non-standard Linux hosts.
+**`detect_host_memory_mb` returns 0 on broken Linux**: if `/proc/meminfo` is
+missing, `ram_cap` becomes 0 and every tier clamps to 0 MB — guard host detection
+on non-standard Linux.
 
-**Windows PowerShell slowness**: `Get-CimInstance Win32_ComputerSystem` spawns PowerShell which adds ~1s to `vagrant up` startup. This is acceptable — detection runs once per `vagrant up`, not per-script.
+**`VM_PROFILE` out of range**: `VM_PROFILE=9`/`0`/non-numeric falls back to the
+saved tier or `DEFAULT_TIER` rather than erroring, and never writes the state file.
 
-**16 GB carve-out condition is AND**: both the RAM range (14000-24000) AND the CPU range (6-9) must match. A 16 GB host with only 4 CPUs gets the standard formula (allocates ~10 GB RAM, 2 CPUs).
+**Cancel aborts the boot**: `q`/Esc/Ctrl-C → `:cancel` → `abort` → vagrant exits 1
+and the VM is NOT started. This is intentional; it is the only path that stops the
+run. A non-tty invocation can never reach it (guard returns the default first).
+
+**Raw mode unavailable**: a terminal that rejects `$stdin.raw` raises inside the
+menu; `select_profile` rescues `StandardError → :failed` and silently uses
+`default_idx`. The menu never crashes a provision over terminal capability.
+
+**Stale `.vagrant/last_profile`**: editing the tier count (e.g. dropping to 4
+tiers) invalidates a saved `5`; `load_saved_tier` returns `nil` for out-of-range
+values, so it quietly falls back to `DEFAULT_TIER` rather than indexing past the
+array.

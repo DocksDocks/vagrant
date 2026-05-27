@@ -1,0 +1,3 @@
+# Vagrant machine-local state (created per-host on `vagrant up`).
+# Includes .vagrant/last_profile — the remembered resource-profile choice.
+.vagrant/

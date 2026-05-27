@@ -1,12 +1,13 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-# ── Detecção automática de recursos do host ─────────────
-# RAM: host − 6 GB reservado, mín 2 GB, máx 16 GB
-# CPUs: host − 2 reservados, mín 1, máx 8
-# Exceção: hosts de 16 GB / 8 CPUs recebem 6.5 GB / 4 CPUs para evitar
-#          starvation do host (Chrome + apps + Claude Code).
+# ── Detecção de recursos do host + menu de perfis ───────
+# Detecta RAM/CPUs do host; `vagrant up`/`reload` num terminal interativo
+# abre um menu de 5 perfis com navegação por setas (↑/↓, Enter, q). Teto
+# fixo de 75% do host; a última escolha é lembrada e pré-selecionada.
 require 'rbconfig'
+require 'io/console'
+require 'fileutils'
 
 HOST_OS = RbConfig::CONFIG['host_os']
 
@@ -49,15 +50,150 @@ end
 host_ram  = detect_host_memory_mb
 host_cpus = detect_host_cpus
 
-vm_memory, vm_cpus =
-  if host_ram >= 14000 && host_ram < 24000 && host_cpus >= 6 && host_cpus <= 9
-    [6656, 4]
-  else
-    [
-      [[host_ram - 6144, 2048].max, 16384].min,
-      [[host_cpus - 2,   1   ].max, 8    ].min,
-    ]
+# ── Perfis de recursos (menu interativo) ────────────────
+# Cinco níveis escalados a partir de uma referência de 16 GB / 8 núcleos,
+# cada um limitado a 75% da RAM e das CPUs do host. Num host 16 GB / 8 CPU
+# resolvem para a escada canônica:
+#   5.0 / 6.5 / 8.0 / 9.5 / 11.0 GB   e   4 / 5 / 6 / 6 / 6 vCPU
+# `vagrant up`/`reload` interativo abre o menu de setas; fora disso (status,
+# ssh, provision, CI, stdin não-tty) usa o nível lembrado/padrão em silêncio.
+# Pule o menu com VM_PROFILE=1..5 (one-shot; não altera a escolha lembrada).
+RAM_TIER_PCT = [0.3125, 0.40625, 0.5, 0.59375, 0.6875].freeze
+CPU_TIER_PCT = [0.5, 0.625, 0.75, 0.75, 0.75].freeze
+DEFAULT_TIER = 2  # base-1; 6.5 GB / 5 vCPU num host de 16 GB / 8 núcleos
+
+# Estado persistente da última escolha (índice 1-5). Fica em .vagrant/
+# (estado local da máquina, fora do git) e é pré-selecionado no próximo up.
+PROFILE_STATE_FILE = File.join(File.dirname(File.expand_path(__FILE__)), ".vagrant", "last_profile")
+
+def build_profiles(host_ram, host_cpus)
+  ram_cap = (host_ram  * 0.75).floor
+  cpu_cap = [(host_cpus * 0.75).floor, 1].max
+  RAM_TIER_PCT.each_index.map do |i|
+    mem = (host_ram * RAM_TIER_PCT[i] / 256).round * 256
+    mem = [[mem, 2048].max, ram_cap].min
+    cpu = [[(host_cpus * CPU_TIER_PCT[i]).round, 1].max, cpu_cap].min
+    [mem, cpu]
   end
+end
+
+# Lê o índice lembrado (1..num_tiers) do arquivo de estado, ou nil.
+def load_saved_tier(num_tiers)
+  return nil unless File.file?(PROFILE_STATE_FILE)
+  idx = File.read(PROFILE_STATE_FILE).strip.to_i
+  (1..num_tiers).include?(idx) ? idx : nil
+rescue StandardError
+  nil
+end
+
+# Grava a escolha. Best-effort: nunca aborta o boot por falha de I/O.
+def save_tier(idx)
+  FileUtils.mkdir_p(File.dirname(PROFILE_STATE_FILE))
+  File.write(PROFILE_STATE_FILE, "#{idx}\n")
+rescue StandardError
+  nil
+end
+
+# Redesenha o menu na tela alternativa: caixa de título, linhas de perfil
+# (a do cursor vira uma barra destacada) e a legenda de teclas.
+def render_profile_menu(profiles, host_ram, host_cpus, cursor, saved_idx)
+  lines = [
+    "",
+    "  \e[1;96m╔══════════════════════════════════════╗\e[0m",
+    "  \e[1;96m║        PERFIL DE RECURSOS DA VM        ║\e[0m",
+    "  \e[1;96m╚══════════════════════════════════════╝\e[0m",
+    "  \e[2mhost: #{host_ram} MB / #{host_cpus} CPU  ·  teto 75%\e[0m",
+    "",
+  ]
+  profiles.each_with_index do |(mem, cpu), i|
+    tags = []
+    tags << "padrão" if i + 1 == DEFAULT_TIER
+    tags << "último" if i + 1 == saved_idx
+    ann  = tags.empty? ? "" : "  (#{tags.join(' · ')})"
+    text = format(" %5.1f GB   /  %d vCPU%s", mem / 1024.0, cpu, ann)
+    lines << (i == cursor ? "  \e[1;97;44m ❯#{text.ljust(36)}\e[0m" : "    #{text}")
+  end
+  lines << ""
+  lines << "  \e[2m↑/↓\e[0m mover   \e[1;92m↵ Enter\e[0m confirmar   \e[2mq\e[0m cancelar"
+  $stdout.print "\e[H\e[2J" + lines.join("\r\n") + "\r\n"
+  $stdout.flush
+end
+
+# Lê uma tecla em raw mode. Setas chegam como rajada "\e[A"/"\e[B".
+def read_menu_key
+  IO.select([$stdin])
+  $stdin.read_nonblock(8)
+rescue IO::WaitReadable
+  retry
+rescue EOFError
+  "q"
+end
+
+# Loop do menu. Retorna o índice 1-based escolhido ou :cancel. Pode levantar
+# exceção se o terminal não suportar raw mode (o chamador trata como fallback).
+def interactive_profile_menu(profiles, host_ram, host_cpus, initial_idx, saved_idx)
+  cursor = initial_idx - 1
+  $stdout.print "\e[?1049h\e[?25l"  # tela alternativa + esconde cursor
+  begin
+    $stdin.raw do
+      loop do
+        render_profile_menu(profiles, host_ram, host_cpus, cursor, saved_idx)
+        case read_menu_key
+        when "\e[A", "k" then cursor = (cursor - 1) % profiles.length
+        when "\e[B", "j" then cursor = (cursor + 1) % profiles.length
+        when "\r", "\n"  then return cursor + 1
+        when "q", "\e", "" then return :cancel
+        end
+      end
+    end
+  ensure
+    $stdout.print "\e[?25h\e[?1049l"  # mostra cursor + sai da tela alternativa
+    $stdout.flush
+  end
+end
+
+def select_profile(profiles, host_ram, host_cpus)
+  return $vm_profile if $vm_profile
+
+  saved       = load_saved_tier(profiles.length)
+  default_idx = saved || DEFAULT_TIER
+
+  # Override não-interativo (automação/CI): VM_PROFILE=1..5. One-shot — não
+  # sobrescreve a escolha lembrada.
+  if (env = ENV["VM_PROFILE"])
+    idx = env.to_i
+    idx = default_idx unless (1..profiles.length).include?(idx)
+    return ($vm_profile = profiles[idx - 1])
+  end
+
+  # Só abre o menu num `up`/`reload` interativo. Demais comandos (status, ssh,
+  # provision) e stdin/stdout não-tty caem no nível lembrado/padrão sem prompt.
+  booting = !(ARGV & %w[up reload]).empty?
+  unless booting && $stdin.tty? && $stdout.tty?
+    return ($vm_profile = profiles[default_idx - 1])
+  end
+
+  choice =
+    begin
+      interactive_profile_menu(profiles, host_ram, host_cpus, default_idx, saved)
+    rescue StandardError
+      :failed  # terminal sem raw mode → fallback silencioso ao padrão
+    end
+
+  case choice
+  when Integer
+    save_tier(choice)
+    mem, cpu = profiles[choice - 1]
+    $stdout.printf("  → perfil: %.1f GB / %d vCPU\n\n", mem / 1024.0, cpu)
+    $vm_profile = [mem, cpu]
+  when :cancel
+    abort("\n  Cancelado — a VM não foi iniciada.\n")
+  else
+    $vm_profile = profiles[default_idx - 1]
+  end
+end
+
+vm_memory, vm_cpus = select_profile(build_profiles(host_ram, host_cpus), host_ram, host_cpus)
 
 # ── Provisioning source config ──────────────────────────
 # Scripts live in this repo under scripts/ and assets/. At provision time

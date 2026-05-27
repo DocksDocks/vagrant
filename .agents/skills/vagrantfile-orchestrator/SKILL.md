@@ -1,13 +1,13 @@
 ---
 name: vagrantfile-orchestrator
-description: Use when modifying the Vagrantfile (Ruby DSL): adding or reordering scripts in the SCRIPTS array, changing the inline runner that bootstraps curl and caches /tmp/vagrant-_lib.sh, adjusting host detection (detect_host_memory_mb, detect_host_cpus, detect_audio_driver, the 16 GB / 8-CPU carve-out giving 6656 MB / 4 vCPU), tweaking the VirtualBox vb.customize block (--vram 256, --graphicscontroller vmsvga, --clipboard-mode bidirectional, --draganddrop bidirectional, --audio-driver), forwarding env vars to provisioners (SCRIPTS_REPO=docksdocks/vagrant, SCRIPTS_REF, VAGRANT_SCRIPTS_DIR, FORCE_REINSTALL), or switching between local-dev (/vagrant/scripts) and remote-fetch (raw.githubusercontent.com/$SCRIPTS_REPO/$SCRIPTS_REF) modes. Not for shell-script conventions inside the per-concern scripts, VMSVGA gotchas, or ADR authoring.
+description: Use when modifying the Vagrantfile: adding or reordering scripts in the SCRIPTS array, changing the inline runner that bootstraps curl and caches /tmp/vagrant-_lib.sh, adjusting host detection (detect_host_memory_mb, detect_host_cpus, detect_audio_driver) or the 5-tier resource-profile selection (build_profiles/select_profile, RAM_TIER_PCT/CPU_TIER_PCT, DEFAULT_TIER, 75%-of-host cap) with its interactive arrow-key menu (alt-screen io/console raw mode, ↑/↓/j/k/Enter/q) and .vagrant/last_profile persistence plus VM_PROFILE=1..5 one-shot override (order: VM_PROFILE, saved, DEFAULT_TIER), tweaking the VirtualBox vb.customize block (--vram 256, --graphicscontroller vmsvga, bidirectional clipboard/draganddrop, --audio-driver), forwarding env vars to provisioners (SCRIPTS_REPO, SCRIPTS_REF, VAGRANT_SCRIPTS_DIR, FORCE_REINSTALL), or switching local-dev (/vagrant/scripts) and remote-fetch (raw.githubusercontent.com) modes. Not for shell-script conventions in the per-concern scripts, VMSVGA gotchas, or ADR authoring.
 user-invocable: false
 metadata:
   pattern: tool-wrapper
   source_files:
     - "Vagrantfile"
     - "plans/0002-split-vagrantfile.md"
-  updated: "2026-05-13"
+  updated: "2026-05-27"
 ---
 
 # Vagrantfile Orchestrator
@@ -21,7 +21,7 @@ The base box MUST be `bento/debian-13`. `debian/trixie64` is libvirt-only (Debia
 </constraint>
 
 <constraint>
-The graphics controller MUST be `vmsvga`. VBoxSVGA is Windows-only and causes black screen from boot on Linux guests. Source: `Vagrantfile:105`.
+The graphics controller MUST be `vmsvga`. VBoxSVGA is Windows-only and causes black screen from boot on Linux guests. Source: `Vagrantfile:241`.
 </constraint>
 
 ## When to Use
@@ -124,7 +124,7 @@ vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
 vb.customize ["modifyvm", :id, "--audio-driver", detect_audio_driver]
 ```
 
-Source: `Vagrantfile:104-108`. 256 MB is the hard VMSVGA ceiling (silently clamped above that). See virtualbox-vmsvga-gotchas skill for full rationale.
+Source: `Vagrantfile:240-244` (provider block `Vagrantfile:235-249`). 256 MB is the hard VMSVGA ceiling (silently clamped above that). See virtualbox-vmsvga-gotchas skill for full rationale.
 
 ### /tmp sticky-bit defensive chmod
 
@@ -140,13 +140,14 @@ Source: `Vagrantfile:132-135` (inline runner, before script execution). bento/de
 - **Ref pinning via `VAGRANT_SCRIPTS_REF`**: defaults to `main`; pin to a tag (`v1.0.0`) for reproducible production boxes. Source: `Vagrantfile:69`.
 - **`_lib.sh` cached at `/tmp/`**: avoids 15 separate network fetches per provision run; all scripts share the same download. Source: `Vagrantfile:150-155`.
 - **`bento/debian-13` is the only valid base box**: libvirt-only and Forky-tracking alternatives are both broken for different reasons. Source: `Vagrantfile:91`.
-- **Host carve-out for 16 GB / 8-CPU hosts**: these hosts allocate 6656 MB / 4 vCPU to avoid starving host Chrome+Claude. Source: `Vagrantfile:53-54`.
+- **Interactive 5-tier resource profile**: `build_profiles` (`Vagrantfile:69-79`) scales RAM/CPU off `RAM_TIER_PCT`/`CPU_TIER_PCT` (`Vagrantfile:61-62`), each tier rounded to 256 MB and clamped to 75% of host RAM/CPU. `DEFAULT_TIER = 2` (`Vagrantfile:63`) is 6.5 GB / 5 vCPU on a 16 GB / 8-core host. The tier math (percentages, 256 MB rounding, 75% cap, `DEFAULT_TIER`) is unchanged from the original numbered-prompt version.
+- **Arrow-key menu + persistence**: an interactive `up`/`reload` opens an alternate-screen arrow-key TUI (`interactive_profile_menu` `Vagrantfile:134-153`, `render_profile_menu` `Vagrantfile:99-121`, `read_menu_key` `Vagrantfile:123-132`) — `io/console` raw mode, ↑/↓ or `j`/`k` with wrap-around, Enter confirms, `q`/Esc/Ctrl-C cancels (→ `abort`, exit 1, VM not started). `select_profile` (`Vagrantfile:155-194`) resolves the tier as **`VM_PROFILE` env (one-shot, does NOT persist) → saved `.vagrant/last_profile` → `DEFAULT_TIER`**; `load_saved_tier`/`save_tier` (`Vagrantfile:81-95`) read/write the index via `PROFILE_STATE_FILE` (`Vagrantfile:67`), and the saved tier is the pre-selected cursor row plus the silent fallback for non-tty runs. Raw-mode failure rescues `StandardError` → silent default fallback (never aborts). Source: `Vagrantfile:5-7,61-196`.
 
 ## Gotchas
 
 **Switching to `debian/trixie64`**: fails on VirtualBox hosts with "No usable default provider could be found" — the box is libvirt-only. Source: `Vagrantfile:91`, `CLAUDE.md`.
 
-**Changing `vmsvga` to `vboxsvga`**: causes black screen from boot on Linux guests — VBoxSVGA requires the `vboxvideo` driver which does not load on Debian 13. Source: `Vagrantfile:105`.
+**Changing `vmsvga` to `vboxsvga`**: causes black screen from boot on Linux guests — VBoxSVGA requires the `vboxvideo` driver which does not load on Debian 13. Source: `Vagrantfile:241`.
 
 **Adding a script file without updating `SCRIPTS` array**: the file is never executed. Vagrant only runs provisioners declared in the array.
 
@@ -156,4 +157,4 @@ Source: `Vagrantfile:132-135` (inline runner, before script execution). bento/de
 
 ## References
 
-- `references/host-resource-detection.md` — Read when: changing the memory/CPU calculation, adding a new OS branch, or understanding the 16 GB carve-out.
+- `references/host-resource-detection.md` — Read when: changing the memory/CPU calculation, adding a new OS branch, adjusting the 5-tier math or 75% cap, touching the arrow-key TUI (alt-screen raw mode, `render_profile_menu`/`read_menu_key`/`interactive_profile_menu`), the `.vagrant/last_profile` persistence (`load_saved_tier`/`save_tier`), the `VM_PROFILE → saved → DEFAULT_TIER` resolution order, the cancel→`abort` path, or the raw-mode-failure fallback.
