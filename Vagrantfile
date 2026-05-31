@@ -10,6 +10,7 @@ require 'io/console'
 require 'fileutils'
 
 HOST_OS = RbConfig::CONFIG['host_os']
+WINDOWS = !(HOST_OS =~ /mswin|mingw|cygwin/i).nil?
 
 def detect_host_memory_mb
   if HOST_OS =~ /darwin/i
@@ -114,36 +115,107 @@ def render_profile_menu(profiles, host_ram, host_cpus, cursor, saved_idx)
     lines << (i == cursor ? "  \e[1;97;44m ❯#{text.ljust(36)}\e[0m" : "    #{text}")
   end
   lines << ""
-  lines << "  \e[2m↑/↓\e[0m mover   \e[1;92m↵ Enter\e[0m confirmar   \e[2mq\e[0m cancelar"
+  lines << "  \e[2m↑/↓\e[0m mover   \e[2m1-#{profiles.length}\e[0m ir   \e[1;92m↵ Enter\e[0m confirmar   \e[2mq\e[0m cancelar"
   $stdout.print "\e[H\e[2J" + lines.join("\r\n") + "\r\n"
   $stdout.flush
 end
 
-# Lê uma tecla em raw mode. Setas chegam como rajada "\e[A"/"\e[B".
-def read_menu_key
+# ── Leitura de teclas: por que dois caminhos ────────────
+# As setas chegam ao processo de formas diferentes conforme o host:
+#   • Unix/macOS (e Windows Terminal em modo VT): rajada ANSI "\e[A"/"\e[B",
+#     que um IO.select + read_nonblock captura inteira.
+#   • Console clássico do Windows (cmd.exe/PowerShell em conhost, o padrão):
+#     as setas NÃO viram bytes no stdin lido por read_nonblock — só aparecem
+#     via getch, como tecla estendida = prefixo 0x00/0xE0 + scancode ASCII
+#     (H=0x48 cima, P=0x50 baixo). Por isso, no Windows, "q"/"j"/"k"/Enter
+#     (caracteres normais) funcionavam mas as setas não faziam nada.
+# Refs.: ruby/io-console console.c (getch devolve prefixo+scancode numa só
+# chamada) e docs Oracle/MS sobre o prefixo 0xE0 de teclas estendidas.
+# Os decodificadores são puros (entrada -> símbolo) p/ serem testáveis sem
+# TTY; veja plans/0005-windows-console-arrow-keys.md.
+
+# Decodifica a rajada Unix (string ANSI) numa ação normalizada.
+def decode_unix_burst(burst)
+  case burst
+  when "\e[A", "\eOA", "k"     then :up
+  when "\e[B", "\eOB", "j"     then :down
+  when "\r", "\n"              then :enter
+  when "q", "\e", "", 3.chr    then :cancel  # q / Esc / EOF / Ctrl-C
+  else
+    burst =~ /\A[1-9]\z/ ? [:digit, burst.to_i] : :other
+  end
+end
+
+# Decodifica os bytes devolvidos por getch (Windows) numa ação. Uma tecla
+# estendida vem como 2+ bytes terminando no scancode ASCII; analisamos por
+# bytes para não depender da codepage, que pode reencodar o prefixo 0xE0.
+def decode_win_getch(bytes)
+  if bytes.length >= 2
+    case bytes.last
+    when 0x48 then :up      # scancode 'H' (seta para cima)
+    when 0x50 then :down    # scancode 'P' (seta para baixo)
+    else :other            # esquerda/direita/PgUp/F-keys -- ignorado
+    end
+  else
+    case bytes.first
+    when 0x0D, 0x0A       then :enter            # Enter (CR/LF)
+    when 0x6B             then :up               # k
+    when 0x6A             then :down             # j
+    when 0x71, 0x1B, 0x03 then :cancel           # q / Esc / Ctrl-C
+    when 0x31..0x39       then [:digit, bytes.first - 0x30]
+    else :other
+    end
+  end
+end
+
+# Leitor Unix: bloqueia até haver entrada e devolve a ação da rajada.
+def next_action_unix
   IO.select([$stdin])
-  $stdin.read_nonblock(8)
+  decode_unix_burst($stdin.read_nonblock(16))
 rescue IO::WaitReadable
   retry
 rescue EOFError
-  "q"
+  :cancel
 end
 
-# Loop do menu. Retorna o índice 1-based escolhido ou :cancel. Pode levantar
-# exceção se o terminal não suportar raw mode (o chamador trata como fallback).
+# Leitor Windows: getch (read_nonblock não enxerga as setas). getch já gere o
+# modo do console, então não precisa do bloco raw.
+def next_action_windows
+  decode_win_getch($stdin.getch.bytes)
+end
+
+# Laço comum do menu: redesenha, lê uma ação (via bloco) e atualiza o cursor.
+# Recebe o leitor como bloco para servir tanto Unix quanto Windows. Retorna o
+# índice 1-based escolhido (Enter) ou :cancel.
+def run_menu_loop(profiles, host_ram, host_cpus, cursor, saved_idx)
+  loop do
+    render_profile_menu(profiles, host_ram, host_cpus, cursor, saved_idx)
+    case (action = yield)
+    when :up     then cursor = (cursor - 1) % profiles.length
+    when :down   then cursor = (cursor + 1) % profiles.length
+    when :enter  then return cursor + 1
+    when :cancel then return :cancel
+    else
+      if action.is_a?(Array) && action.first == :digit &&
+         (1..profiles.length).cover?(action.last)
+        cursor = action.last - 1
+      end
+    end
+  end
+end
+
+# Abre o menu na tela alternativa. No Unix usa raw mode + leitor de rajada; no
+# Windows usa getch direto. Pode levantar exceção se o terminal não suportar
+# (o chamador trata como fallback silencioso ao padrão).
 def interactive_profile_menu(profiles, host_ram, host_cpus, initial_idx, saved_idx)
   cursor = initial_idx - 1
   $stdout.print "\e[?1049h\e[?25l"  # tela alternativa + esconde cursor
   begin
-    $stdin.raw do
-      loop do
-        render_profile_menu(profiles, host_ram, host_cpus, cursor, saved_idx)
-        case read_menu_key
-        when "\e[A", "k" then cursor = (cursor - 1) % profiles.length
-        when "\e[B", "j" then cursor = (cursor + 1) % profiles.length
-        when "\r", "\n"  then return cursor + 1
-        when "q", "\e", "" then return :cancel
-        end
+    if WINDOWS
+      run_menu_loop(profiles, host_ram, host_cpus, cursor, saved_idx) { next_action_windows }
+    else
+      $stdin.raw do
+        run_menu_loop(profiles, host_ram, host_cpus, cursor, saved_idx) { next_action_unix }
       end
     end
   ensure
