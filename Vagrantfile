@@ -279,6 +279,7 @@ LOCAL_DIR    = ENV["VAGRANT_SCRIPTS_DIR"]
 
 SCRIPTS = %w[
   10-apt-repos
+  15-grub-quickboot
   20-packages
   30-guest-additions
   40-xfce-base

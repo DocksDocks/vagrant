@@ -6,7 +6,7 @@ export DEBIAN_FRONTEND=noninteractive
 # ── Instalação em lote ──────────────────────────────────
 echo ">> Instalando todos os pacotes..."
 apt-get install -y -qq \
-  git jq yq ripgrep build-essential tilix libharfbuzz-gobject0 wget unzip shellcheck rsync dconf-cli \
+  git jq yq ripgrep build-essential tilix libharfbuzz-gobject0 wget zip unzip shellcheck rsync dconf-cli \
   fd-find fzf bat htop btop tree direnv \
   python3 python3-pip python3-venv \
   php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \

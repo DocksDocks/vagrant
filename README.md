@@ -186,6 +186,7 @@ Then run `vagrant reload` to apply.
 ├── scripts/            # numbered shell scripts, fetched from GitHub at provision time
 │   ├── _lib.sh         # shared helpers (fetch_asset)
 │   ├── 10-apt-repos.sh
+│   ├── 15-grub-quickboot.sh
 │   ├── 20-packages.sh
 │   ├── 30-guest-additions.sh
 │   ├── 40-xfce-base.sh

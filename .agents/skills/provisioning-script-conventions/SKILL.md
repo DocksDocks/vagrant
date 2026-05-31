@@ -7,6 +7,7 @@ metadata:
   source_files:
     - "scripts/_lib.sh"
     - "scripts/10-apt-repos.sh"
+    - "scripts/15-grub-quickboot.sh"
     - "scripts/20-packages.sh"
     - "scripts/30-guest-additions.sh"
     - "scripts/40-xfce-base.sh"
@@ -23,7 +24,7 @@ metadata:
     - "scripts/99-finalize.sh"
     - "plans/0002-split-vagrantfile.md"
     - "README.md"
-  updated: "2026-05-13"
+  updated: "2026-05-31"
 ---
 
 # Provisioning Script Conventions
@@ -101,7 +102,7 @@ See references/fetch-asset-helper.md for semantics.
 
 | Current slots | Free gaps (can insert here) |
 |---|---|
-| 10, 20, 30, 40, 41, 50, 51, 55, 60, 65, 70, 80, 85, 90, 99 | 25, 35, 45, 75, 95 |
+| 10, 15, 20, 30, 40, 41, 50, 51, 55, 60, 65, 70, 80, 85, 90, 99 | 25, 35, 45, 75, 95 |
 
 Gaps are cosmetic — Vagrant executes in `SCRIPTS` array declaration order, not filename order. Source: `plans/0002-split-vagrantfile.md:44`.
 

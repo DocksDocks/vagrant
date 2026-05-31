@@ -24,6 +24,7 @@ The `Vagrantfile` (~300 lines) handles host-side resource detection and the Virt
 2. **VirtualBox config** (Vagrantfile lines 235-249): VM resources, VMSVGA graphics, bidirectional clipboard, drag-and-drop, audio.
 3. **Per-concern shell scripts** (`scripts/`):
    - `10-apt-repos.sh` — system update, timezone, grub-pc seed, external repos (Chrome, Docker, gh).
+   - `15-grub-quickboot.sh` — set `GRUB_TIMEOUT=0` + `GRUB_TIMEOUT_STYLE=hidden` so the VM boots straight into Debian (skips the bento base-box's 1-second GRUB menu); idempotent, runs `update-grub` only when a value changed. Shift/Esc still reveals the menu.
    - `20-packages.sh` — batch `apt install`, Composer (with SHA-384 verification), docker group, vagrant password.
    - `30-guest-additions.sh` — VBox Guest Additions from ISO (idempotent: skips if VBoxClient is present).
    - `40-xfce-base.sh` — LightDM autologin, panel/dock layout, Chrome as default browser, Chrome no-GPU policy.
@@ -48,7 +49,7 @@ The `Vagrantfile` (~300 lines) handles host-side resource detection and the Virt
 
 ## Installed Tools
 
-**CLI:** Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions (curl, mbstring, xml, zip, bcmath, intl), Composer (SHA-384 verified at install), Docker + Compose v2 plugin + Buildx + containerd.io, Node.js LTS (nvm), npm, pnpm, Claude Code, Codex CLI, ShellCheck, jq, yq, ripgrep, build-essential, fzf, bat (alias `bat`→`batcat`), fd-find (alias `fd`→`fdfind`), htop, btop, tree, direnv, Lazygit, superfile (`spf`), wget, unzip, rsync, xclip.
+**CLI:** Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions (curl, mbstring, xml, zip, bcmath, intl), Composer (SHA-384 verified at install), Docker + Compose v2 plugin + Buildx + containerd.io, Node.js LTS (nvm), npm, pnpm, Claude Code, Codex CLI, ShellCheck, jq, yq, ripgrep, build-essential, fzf, bat (alias `bat`→`batcat`), fd-find (alias `fd`→`fdfind`), htop, btop, tree, direnv, Lazygit, superfile (`spf`), wget, zip, unzip, rsync, xclip.
 
 **Desktop:** XFCE 4 (panel, whiskermenu, docklike, taskmanager, notifyd, screenshooter), Tilix (split-pane terminal — default), Mousepad (text editor), LightDM + lightdm-gtk-greeter, Google Chrome, dbus-x11, xdg-utils, pulseaudio + alsa-utils, JetBrainsMono Nerd Font, fonts-noto + noto-color-emoji, Arc-Dark theme, Papirus + Papirus-Dark icons, DMZ-Cursor.
 
