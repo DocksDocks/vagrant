@@ -74,28 +74,28 @@ On an Integer choice → `save_tier` + use (`:184-188`); on `:cancel` →
 `abort("Cancelado…")` (exit 1, VM not started, `:189-190`); on `:failed` (raw-mode
 exception) → `default_idx` fallback (`:191-192`).
 
-## Arrow-key TUI (alternate screen, raw mode)
+## Key reading — host-aware (alternate screen)
 
 ```ruby
-render_profile_menu(...)        # Vagrantfile:99-121  alt-screen redraw + legend
-read_menu_key                   # Vagrantfile:123-132 IO.select + read_nonblock(8)
-interactive_profile_menu(...)   # Vagrantfile:134-153 raw loop, returns Int|:cancel
+render_profile_menu(...)        # Vagrantfile:100-121 alt-screen redraw + legend
+decode_unix_burst / decode_win_getch   # :137-169 input -> action symbol (pure)
+next_action_unix / next_action_windows # :171-185 per-OS readers
+run_menu_loop(...) { reader }   # :187-205 draw/read/update; returns Int|:cancel
+interactive_profile_menu(...)   # :207-225 branches on WINDOWS
 ```
 
-- **Enter/leave alt screen** (`:136`, `:150`): `\e[?1049h\e[?25l` on entry (alt
-  screen + hide cursor), `\e[?25h\e[?1049l` in an `ensure` block on exit — the
-  ensure guarantees the terminal is restored even on exception.
-- **Raw mode** (`:138`): `$stdin.raw do … end` from `require 'io/console'`
-  (`Vagrantfile:9`); `require 'fileutils'` (`:10`) backs `save_tier`.
-- **Atomic key read** (`:124-125`): `IO.select([$stdin])` then
-  `$stdin.read_nonblock(8)` reads a full `\e[A`/`\e[B` escape burst in one go;
-  EOF → `"q"`.
-- **Navigation** (`:142-145`): `\e[A`/`k` up, `\e[B`/`j` down, both
-  `% profiles.length` (wrap-around); `\r`/`\n` returns `cursor+1`; `q`/`\e`/`""`
-  returns `:cancel`.
-- **Highlight bar** (`:114`): the cursor row is `\e[1;97;44m ❯…\e[0m` (bold
-  bright-white on blue with a `❯` marker); other rows are plain. Tier labels show
-  `(padrão)` for `DEFAULT_TIER` and `(último)` for the saved tier (`:110-112`).
+- **Why two readers** (plans/0005): on a classic Windows console arrow keys never
+  reach `read_nonblock` — they arrive only via `getch` as a `0x00`/`0xE0` prefix +
+  ASCII scancode (`H`=up, `P`=down), so the burst reader saw `q`/`j`/`k` but not
+  ↑/↓. `WINDOWS` (`Vagrantfile:13`) selects the reader.
+- **Alt screen** (`:212`,`:222`): `\e[?1049h\e[?25l` on entry, `\e[?25h\e[?1049l`
+  in an `ensure` (restored on exception); raw mode (`$stdin.raw`) wraps the loop on Unix only.
+- **Unix** `decode_unix_burst`: `\e[A`/`k`→`:up`, `\e[B`/`j`→`:down`, `\r`/`\n`→
+  `:enter`, `q`/`\e`/Ctrl-C/EOF→`:cancel`, `1-9`→`[:digit,n]`.
+- **Windows** `decode_win_getch`: keys off the **trailing** scancode byte with
+  `bytes.length >= 2`, robust to the codepage re-encoding the `0xE0` prefix.
+- **Highlight bar** (`:114`): cursor row `\e[1;97;44m ❯…\e[0m`; labels `(padrão)`/
+  `(último)` for `DEFAULT_TIER`/saved (`:110-112`).
 
 ## Resolved tiers (verified by running the code)
 
