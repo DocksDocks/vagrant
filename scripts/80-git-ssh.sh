@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
-# 80-git-ssh-lazygit.sh — Lazygit + SSH key + bashrc aliases + git defaults.
+# 80-git-ssh.sh — git-pull-all + SSH key + bashrc aliases + git defaults.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-# ── Lazygit (terminal Git UI) ───────────────────────────
-echo ">> Instalando lazygit..."
-LAZYGIT_VERSION=$(curl -fsSL --retry 4 --retry-delay 2 "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | jq -r '.tag_name' | sed 's/^v//')
-curl -fsSL --retry 4 --retry-delay 2 "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" | \
-  tar -xz -C /usr/local/bin lazygit
+: "${SCRIPTS_REPO:=docksdocks/vagrant}"
+: "${SCRIPTS_REF:=main}"
+
+# shellcheck source=_lib.sh
+. "${VAGRANT_LIB_PATH:-/vagrant/scripts/_lib.sh}"
+
+# ── git-pull-all (bulk fetch + ff-only pull) ────────────
+# Walks a directory tree and updates every repo under it. On PATH as
+# git-pull-all, so `git pull-all` dispatches to it too. fetch_asset lands it
+# 0644; flip the exec bit so it's runnable.
+echo ">> Instalando git-pull-all..."
+fetch_asset bin/git-pull-all /usr/local/bin/git-pull-all
+chmod 0755 /usr/local/bin/git-pull-all
 
 # ── SSH Key + alias + ~/projects ────────────────────────
 echo ">> Configurando SSH key, alias e diretório de projetos..."

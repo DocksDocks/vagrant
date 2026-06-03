@@ -8,7 +8,7 @@ metadata:
     - "Vagrantfile"
     - "plans/0002-split-vagrantfile.md"
     - "plans/0005-windows-console-arrow-keys.md"
-  updated: "2026-05-31"
+  updated: "2026-06-03"
 ---
 
 # Vagrantfile Orchestrator
@@ -75,7 +75,7 @@ SCRIPTS = %w[
   60-apps-tilix-mousepad
   65-superfile-fonts
   70-nodejs-claude
-  80-git-ssh-lazygit
+  80-git-ssh
   85-secrets-env
   90-claude-config-sync
   99-finalize

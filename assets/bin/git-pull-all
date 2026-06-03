@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+# git-pull-all — fetch + fast-forward every git repo under a directory tree.
+#
+# Walks DIR, finds every repository (a directory containing .git/) at any depth,
+# and on each runs `git fetch --all --prune` then `git pull --ff-only`.
+# Repos that can't be safely fast-forwarded are still fetched, never pulled, and
+# reported so you can deal with them by hand:
+#   • dirty working tree   • no upstream    • detached HEAD
+#   • diverged branch (local + remote both moved)   • no remote at all
+#
+# Because the binary is on PATH as `git-pull-all`, git also dispatches it as a
+# subcommand: `git pull-all` works identically.
+#
+# Usage:
+#   git-pull-all [OPTIONS] [DIR]
+#
+# Options:
+#   -f, --fetch-only   Fetch and prune only; never pull.
+#   -q, --quiet        Only print repos that changed or need attention.
+#   -n, --dry-run      Report what would happen; touch nothing.
+#       --no-color     Disable ANSI colour (also honours $NO_COLOR).
+#   -h, --help         Show this help.
+#
+# DIR defaults to the current directory.
+# Exit status is non-zero only if a repo failed to fetch (network/auth);
+# dirty/diverged/no-upstream repos are warnings, not failures.
+
+# No `-e`: per-repo failures are handled inline so one bad repo can't abort the
+# whole run.
+set -uo pipefail
+
+fetch_only=0
+quiet=0
+dry_run=0
+use_color=1
+root=""
+
+# ── Argument parsing ────────────────────────────────────
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -f|--fetch-only) fetch_only=1 ;;
+    -q|--quiet)      quiet=1 ;;
+    -n|--dry-run)    dry_run=1 ;;
+    --no-color)      use_color=0 ;;
+    -h|--help)       sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --)              shift; root="${1:-}"; break ;;
+    -*)              echo "git-pull-all: unknown option '$1'" >&2; exit 2 ;;
+    *)               root="$1" ;;
+  esac
+  shift
+done
+
+root="${root:-.}"
+if [[ ! -d "$root" ]]; then
+  echo "git-pull-all: '$root' is not a directory" >&2
+  exit 2
+fi
+# Normalise to an absolute path so relative-name trimming is stable.
+root="$(cd "$root" && pwd)"
+
+[[ -n "${NO_COLOR:-}" || ! -t 1 ]] && use_color=0
+if [[ $use_color -eq 1 ]]; then
+  BOLD=$'\e[1m'; DIM=$'\e[2m'; RED=$'\e[31m'; GRN=$'\e[32m'
+  YEL=$'\e[33m'; BLU=$'\e[34m'; CYN=$'\e[36m'; RST=$'\e[0m'
+else
+  BOLD=''; DIM=''; RED=''; GRN=''; YEL=''; BLU=''; CYN=''; RST=''
+fi
+
+# ── Discover repositories ───────────────────────────────
+# Print every .git directory but never descend into it (-prune), and skip
+# heavyweight trees that only ever contain vendored checkouts.
+mapfile -t repos < <(
+  find "$root" \
+    -type d \( -name node_modules -o -name vendor -o -name .terraform \) -prune -o \
+    -type d -name .git -prune -print 2>/dev/null | sort
+)
+
+if [[ ${#repos[@]} -eq 0 ]]; then
+  echo "git-pull-all: no git repositories found under ${BOLD}${root}${RST}" >&2
+  exit 0
+fi
+
+# Column width for aligned output (relative repo name).
+name_of() {
+  local d="${1%/.git}" n="${1%/.git}"
+  n="${d#"$root"/}"
+  [[ "$n" == "$d" ]] && n="$(basename "$d")"
+  printf '%s' "$n"
+}
+width=0
+for g in "${repos[@]}"; do
+  n="$(name_of "$g")"; (( ${#n} > width )) && width=${#n}
+done
+
+printf '%s==>%s scanning %s%s%s — %s%d%s repositories\n' \
+  "$BOLD" "$RST" "$CYN" "$root" "$RST" "$BOLD" "${#repos[@]}" "$RST"
+[[ $dry_run -eq 1 ]] && printf '%s    (dry-run: nothing will be modified)%s\n' "$DIM" "$RST"
+echo
+
+updated=0 uptodate=0 skipped=0 failed=0
+attention=()
+
+# ── Process each repo ───────────────────────────────────
+for g in "${repos[@]}"; do
+  dir="${g%/.git}"
+  name="$(name_of "$g")"
+  q() { git -C "$dir" "$@" 2>/dev/null; }
+
+  branch="$(q symbolic-ref --quiet --short HEAD)" || branch=""
+  [[ -z "$branch" ]] && branch="$(q rev-parse --short HEAD 2>/dev/null)" && detached=1 || detached=0
+
+  line="$(printf '%s%-*s%s  %s%-18s%s' "$BOLD" "$width" "$name" "$RST" "$BLU" "${branch:-?}" "$RST")"
+
+  # No remote → nothing to do.
+  if [[ -z "$(q remote)" ]]; then
+    [[ $quiet -eq 0 ]] && printf '%s  %sno remote%s\n' "$line" "$DIM" "$RST"
+    ((skipped++)); continue
+  fi
+
+  if [[ $dry_run -eq 1 ]]; then
+    action="fetch + pull --ff-only"; [[ $fetch_only -eq 1 ]] && action="fetch only"
+    printf '%s  %swould %s%s\n' "$line" "$DIM" "$action" "$RST"
+    continue
+  fi
+
+  # ── Fetch ──
+  if ! fetch_err="$(git -C "$dir" fetch --all --prune 2>&1)"; then
+    printf '%s  %s✘ fetch failed%s\n' "$line" "$RED" "$RST"
+    printf '%s      %s%s\n' "$DIM" "${fetch_err##*$'\n'}" "$RST"
+    ((failed++)); attention+=("$name — fetch failed")
+    continue
+  fi
+
+  if [[ $fetch_only -eq 1 ]]; then
+    [[ $quiet -eq 0 ]] && printf '%s  %s✔ fetched%s\n' "$line" "$GRN" "$RST"
+    continue
+  fi
+
+  # ── Decide whether a pull is safe ──
+  if [[ $detached -eq 1 ]]; then
+    [[ $quiet -eq 0 ]] && printf '%s  %s✔ fetched%s %s(detached HEAD, not pulled)%s\n' "$line" "$GRN" "$RST" "$YEL" "$RST"
+    ((skipped++)); attention+=("$name — detached HEAD"); continue
+  fi
+
+  if ! q rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null; then
+    [[ $quiet -eq 0 ]] && printf '%s  %s✔ fetched%s %s(no upstream)%s\n' "$line" "$GRN" "$RST" "$YEL" "$RST"
+    ((skipped++)); attention+=("$name — no upstream set"); continue
+  fi
+
+  # left=behind (in upstream, not HEAD), right=ahead (in HEAD, not upstream)
+  read -r behind ahead < <(q rev-list --left-right --count "@{u}...HEAD")
+  behind=${behind:-0}; ahead=${ahead:-0}
+  posn=""; (( ahead > 0 || behind > 0 )) && posn="$(printf '%s↑%s%s ↓%s%s' "$DIM" "$ahead" "$RST" "$behind" "$RST")"
+
+  if [[ -n "$(q status --porcelain)" ]]; then
+    printf '%s  %s✔ fetched%s %s(uncommitted changes — not pulled)%s %s\n' "$line" "$GRN" "$RST" "$YEL" "$RST" "$posn"
+    ((skipped++)); attention+=("$name — dirty working tree (behind $behind)"); continue
+  fi
+
+  if (( behind == 0 )); then
+    [[ $quiet -eq 0 ]] && printf '%s  %s✔ up to date%s %s\n' "$line" "$GRN" "$RST" "$posn"
+    ((uptodate++)); continue
+  fi
+
+  if (( ahead > 0 )); then
+    printf '%s  %s⚠ diverged — cannot fast-forward%s %s\n' "$line" "$YEL" "$RST" "$posn"
+    ((skipped++)); attention+=("$name — diverged (ahead $ahead, behind $behind)"); continue
+  fi
+
+  # ── Fast-forward pull ──
+  if pull_err="$(git -C "$dir" pull --ff-only --quiet 2>&1)"; then
+    printf '%s  %s⬇ fast-forwarded%s %s%s(+%d)%s\n' "$line" "$GRN" "$RST" "$posn" "$DIM" "$behind" "$RST"
+    ((updated++))
+  else
+    printf '%s  %s✘ pull failed%s\n' "$line" "$RED" "$RST"
+    printf '%s      %s%s\n' "$DIM" "${pull_err##*$'\n'}" "$RST"
+    ((failed++)); attention+=("$name — pull failed")
+  fi
+done
+
+# ── Summary ─────────────────────────────────────────────
+echo
+printf '%s==>%s %s%d updated%s, %d up-to-date, %s%d skipped%s, %s%d failed%s\n' \
+  "$BOLD" "$RST" "$GRN" "$updated" "$RST" "$uptodate" "$YEL" "$skipped" "$RST" "$RED" "$failed" "$RST"
+
+if [[ ${#attention[@]} -gt 0 ]]; then
+  printf '%s    needs attention:%s\n' "$YEL" "$RST"
+  for a in "${attention[@]}"; do printf '      %s•%s %s\n' "$YEL" "$RST" "$a"; done
+fi
+
+(( failed > 0 )) && exit 1 || exit 0

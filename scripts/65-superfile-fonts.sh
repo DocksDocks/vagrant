@@ -28,7 +28,7 @@ fi
 
 # ── superfile (spf) ─────────────────────────────────────
 # GitHub release pattern: superfile-linux-v${VERSION}-amd64.tar.gz.
-# Same curl+tar idiom used for lazygit in 80-git-ssh-lazygit.sh.
+# curl-pipe-tar lands the single binary straight into /usr/local/bin.
 if [[ "$FORCE" != "1" ]] && [ -x /usr/local/bin/spf ]; then
   echo ">> superfile already installed — skipping."
 else

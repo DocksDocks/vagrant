@@ -45,7 +45,7 @@ Install both before you start:
 | **htop / btop**  | Process monitors                                                 |
 | **tree**         | Directory tree visualization                                     |
 | **direnv**       | Per-project environment variables                                |
-| **Lazygit**      | Terminal Git UI (TUI) — staging, commits, branches               |
+| **git-pull-all** | Bulk-update every repo under a dir (`git pull-all` works too)     |
 | **superfile**    | TUI file manager (`spf`) with Nerd Font icons                    |
 
 ## VM resources (dynamic allocation)
@@ -84,6 +84,7 @@ Works on Windows, macOS, and Linux. You can override the values by editing `vm_m
 - **Google Chrome** pre-installed for in-VM browsing, with hardware-acceleration disabled via managed policy (avoids Chrome's deadlock under VMSVGA).
 - **ED25519 SSH key** generated at `~/.ssh/id_ed25519` — public key is printed at the end of provisioning so you can paste it into GitHub/GitLab.
 - **`~/projects`** — directory for your projects, pre-created.
+- **`git-pull-all`** — fetch + fast-forward every repo under a directory tree (defaults to the current dir). Run `git-pull-all ~/projects` to update them all at once; dirty, diverged, or upstream-less repos are fetched but never force-pulled, and reported at the end. Use `-f`/`--fetch-only` to fetch without pulling. `git pull-all` dispatches to the same command.
 - **Aliases** — `pf` (~/projects), `fd` (fdfind), `bat` (batcat).
 - **Docker without sudo** — the `vagrant` user is in the `docker` group.
 - **direnv** — hook installed in `.bashrc` so `.envrc` files load automatically.
@@ -197,7 +198,7 @@ Then run `vagrant reload` to apply.
 │   ├── 60-apps-tilix-mousepad.sh
 │   ├── 65-superfile-fonts.sh
 │   ├── 70-nodejs-claude.sh
-│   ├── 80-git-ssh-lazygit.sh
+│   ├── 80-git-ssh.sh
 │   ├── 85-secrets-env.sh
 │   ├── 90-claude-config-sync.sh
 │   └── 99-finalize.sh

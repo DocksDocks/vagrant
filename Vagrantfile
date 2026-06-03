@@ -290,7 +290,7 @@ SCRIPTS = %w[
   60-apps-tilix-mousepad
   65-superfile-fonts
   70-nodejs-claude
-  80-git-ssh-lazygit
+  80-git-ssh
   85-secrets-env
   90-claude-config-sync
   99-finalize

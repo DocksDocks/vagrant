@@ -45,7 +45,7 @@ Instale os dois programas abaixo **antes** de começar:
 | **htop**         | Monitor de processos                                            |
 | **tree**         | Visualização de diretórios                                      |
 | **direnv**       | Variáveis de ambiente por projeto                               |
-| **Lazygit**      | Interface Git no terminal (TUI) — staging, commits, branches    |
+| **git-pull-all** | Atualiza todos os repos sob um diretório (`git pull-all` também) |
 
 ## Recursos da VM (alocação dinâmica)
 
@@ -83,6 +83,7 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 - **Google Chrome** pré-instalado para navegação dentro da VM.
 - **Chave SSH ED25519** gerada em `~/.ssh/id_ed25519` — a chave pública é exibida no terminal ao final do provisionamento para você copiar direto pro GitHub/GitLab.
 - **`~/projects`** — diretório para seus projetos, já criado.
+- **`git-pull-all`** — faz fetch + fast-forward de todos os repos sob um diretório (padrão: o diretório atual). Rode `git-pull-all ~/projects` para atualizar todos de uma vez; repos com alterações não commitadas, divergentes ou sem upstream são apenas atualizados via fetch (nunca puxados à força) e listados no resumo final. Use `-f`/`--fetch-only` para só fazer fetch. `git pull-all` chama o mesmo comando.
 - **Aliases** — `pf` (~/projects), `fd` (fdfind), `bat` (batcat).
 - **Docker sem sudo** — o usuário `vagrant` já está no grupo `docker`.
 - **direnv** — hook ativado no `.bashrc` para carregar `.envrc` automaticamente.
@@ -186,7 +187,7 @@ Depois rode `vagrant reload` para aplicar.
 │   ├── 60-apps-tilix-mousepad.sh
 │   ├── 65-superfile-fonts.sh
 │   ├── 70-nodejs-claude.sh
-│   ├── 80-git-ssh-lazygit.sh
+│   ├── 80-git-ssh.sh
 │   ├── 85-secrets-env.sh
 │   └── 90-claude-config-sync.sh
 ├── assets/         # XFCE/Tilix/Chrome configs, systemd units, helper scripts

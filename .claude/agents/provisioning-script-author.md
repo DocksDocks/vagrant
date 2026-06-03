@@ -43,7 +43,7 @@ scripts (Phase 2b Domain 2).
 Never append to `~/.bashrc` without a `grep -qF 'NN-scriptname.sh'` marker
 guard. Without the guard, each `vagrant provision` run duplicates the block.
 The marker MUST be the script's own filename in a comment.
-Source: `scripts/85-secrets-env.sh:50-55`, `scripts/80-git-ssh-lazygit.sh:16-22`.
+Source: `scripts/85-secrets-env.sh:50-55`, `scripts/80-git-ssh.sh:24-30`.
 </constraint>
 
 <constraint>

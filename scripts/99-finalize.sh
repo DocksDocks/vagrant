@@ -24,7 +24,6 @@ echo "  fzf        : $(fzf --version)"
 echo "  htop       : $(htop --version | head -1)"
 echo "  btop       : $(btop --version | head -1)"
 echo "  spf        : $(spf --version 2>&1 | head -1)"
-echo "  lazygit    : $(lazygit --version | head -1)"
 # shellcheck disable=SC2016  # $(...) intentionally evaluated inside vagrant's shell after nvm sources
 su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && echo "  node       : $(node --version)" && echo "  npm        : $(npm --version)" && echo "  pnpm       : $(pnpm --version)" && echo "  codex      : $(codex --version)"'
 echo "══════════════════════════════════════════"

@@ -17,14 +17,14 @@ metadata:
     - "scripts/60-apps-tilix-mousepad.sh"
     - "scripts/65-superfile-fonts.sh"
     - "scripts/70-nodejs-claude.sh"
-    - "scripts/80-git-ssh-lazygit.sh"
+    - "scripts/80-git-ssh.sh"
     - "scripts/55-permissions.sh"
     - "scripts/85-secrets-env.sh"
     - "scripts/90-claude-config-sync.sh"
     - "scripts/99-finalize.sh"
     - "plans/0002-split-vagrantfile.md"
     - "README.md"
-  updated: "2026-05-31"
+  updated: "2026-06-03"
 ---
 
 # Provisioning Script Conventions
@@ -179,7 +179,7 @@ Source: `assets/apt/99force-conf:1-4`, installed by `scripts/10-apt-repos.sh:13`
 
 **Missing `set -euo pipefail`**: a failing `apt-get install` or broken `curl` silently continues; the VM appears to provision but tools are missing or misconfigured. Every script must have this at line 3.
 
-**Appending to ~/.bashrc without grep-q guard**: each `vagrant provision` run duplicates the block. Four scripts currently append to bashrc — all use the grep-q pattern. Source: `scripts/80-git-ssh-lazygit.sh:16-22`, `scripts/85-secrets-env.sh:50`, `scripts/60-apps-tilix-mousepad.sh:74`, `scripts/70-nodejs-claude.sh:55`.
+**Appending to ~/.bashrc without grep-q guard**: each `vagrant provision` run duplicates the block. Four scripts currently append to bashrc — all use the grep-q pattern. Source: `scripts/80-git-ssh.sh:24-30`, `scripts/85-secrets-env.sh:50`, `scripts/60-apps-tilix-mousepad.sh:74`, `scripts/70-nodejs-claude.sh:55`.
 
 **Missing `|| true` on `umount` / `systemctl enable`**: `set -e` aborts provisioning if the mount was never established or the unit doesn't exist yet. Source: `scripts/30-guest-additions.sh:48-50`.
 
