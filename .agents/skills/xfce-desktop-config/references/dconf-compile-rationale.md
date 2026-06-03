@@ -56,15 +56,15 @@ sed -e 's|^\[/\]$|[com/gexperts/Tilix]|' \
 
 Source: `scripts/60-apps-tilix-mousepad.sh:53-55`
 
-## Compile Replaces the Entire Database
+## Compile Replaces the Entire Database — So Seed Only Once
 
 `dconf compile` writes a completely new binary GVDB — it does NOT merge with existing content. Every keyfile in the directory is compiled together into one output. Consequences:
 
 - All Tilix and Mousepad settings from keyfiles are written in one shot.
-- Any user-changed settings in the VM are overwritten on re-provision.
-- This is acceptable because both apps' settings live in a single payload, and user changes during provisioning would be wiped anyway.
+- Because it replaces the whole db, running it on every provision would wipe any desktop prefs the user changed since first boot (`org/gnome/desktop/{mouse,sound,interface}`, …).
+- To avoid that, the compile is guarded to run only on the FIRST provision: `if [ ! -f /var/lib/vagrant-provisioned ]` (the sentinel `99-finalize.sh` creates). Re-provisioning skips it, preserving the user's changes. There is no flag override — the seed happens exactly once.
 
-Source: `scripts/60-apps-tilix-mousepad.sh:29-31` (comment in script).
+Source: `scripts/60-apps-tilix-mousepad.sh` (the run-once guard + comment).
 
 ## Do NOT Add || true
 

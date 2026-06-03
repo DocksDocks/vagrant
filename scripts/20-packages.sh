@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 20-packages.sh — batch apt install + Composer + docker group + vagrant password.
+# 20-packages.sh — batch apt install + Composer + docker group + first-run password.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
@@ -44,8 +44,14 @@ rm -f "$COMPOSER_INSTALLER"
 # ── Docker (grupo) ──────────────────────────────────────
 usermod -aG docker vagrant
 
-# ── Senha do usuário vagrant ────────────────────────────
-echo 'vagrant:docks' | chpasswd
+# ── Senha do usuário vagrant (só no primeiro provisionamento) ──
+# Set once, on the very first provision only — guarded by the same
+# /var/lib/vagrant-provisioned sentinel that 99-finalize.sh creates at the end
+# of that run. Re-provisioning never touches it, so a password you change later
+# sticks.
+if [ ! -f /var/lib/vagrant-provisioned ]; then
+  echo 'vagrant:vagrant' | chpasswd
+fi
 
 # ── Limpeza pós-install ─────────────────────────────────
 # After the batch install, /var/cache/apt/archives has a ~1 GB pile of .deb

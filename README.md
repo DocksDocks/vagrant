@@ -93,7 +93,7 @@ Works on Windows, macOS, and Linux. You can override the values by editing `vm_m
 - **Tilix** with 4% transparency as the default dock terminal.
 - **Mousepad** with the Solarized Dark scheme and line numbers enabled.
 - **Audio enabled** — output via Intel HD Audio (no microphone).
-- **`vagrant` user password**: `docks`.
+- **`vagrant` user password**: `vagrant` (set on the first provision only; change it freely afterward — re-provisioning won't reset it).
 - **Git config** — `init.defaultBranch=main`. The placeholder `user.name` / `user.email` are only set if you haven't configured your own — re-running `vagrant provision` won't overwrite your real identity.
 - **Agent config sync** — `.claude` and `.codex` config synced from the SSOT repo (`DocksDocks/public`) on first provision.
 - **Timezone** — `America/Sao_Paulo` (UTC-3).

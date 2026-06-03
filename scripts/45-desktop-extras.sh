@@ -31,6 +31,12 @@ mkdir -p /etc/xdg/xfce4/xfconf/xfce-perchannel-xml
 fetch_asset xfce4-keyboard-shortcuts.xml \
   /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml
 
+# Notification toasts disappear after 2s instead of lingering ~15s — the
+# screenshot confirmation in particular should be brief. Same /etc/xdg seed
+# mechanism; on this box it was applied live via xfconf-query.
+fetch_asset xfce4-notifyd.xml \
+  /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-notifyd.xml
+
 # ── XDG dirs the wrapper + bookmarks point at ──────────
 # xdg-user-dirs creates these on first login, but the screenshot target and
 # the bookmarks below reference them, so make sure they exist now.

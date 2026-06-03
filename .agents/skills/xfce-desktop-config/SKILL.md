@@ -1,12 +1,13 @@
 ---
 name: xfce-desktop-config
-description: Use when shaping the XFCE/LightDM/GTK guest experience without an active D-Bus session: writing xfconf channel XML for xfwm4.xml, xsettings.xml, xfce4-panel.xml, xfce4-power-manager.xml, using dconf compile (NOT dconf load — provisioning has no session bus) to build ~/.config/dconf/user from keyfiles for Tilix and Mousepad, rewriting tilix.dconf section headers from [/] to [com/gexperts/Tilix], configuring LightDM autologin with runtime detection of xfce.desktop vs xfce4.desktop, deploying lightdm-gtk-greeter.conf (Arc-Dark + Papirus-Dark + Noto Sans), shadowing light-locker.desktop with Hidden=true, working around the Papirus-Dark icon inheritance gap (inherits from breeze-dark,hicolor) by symlinking utilities-terminal.svg into the user-XDG hicolor overlay, holding Tilix profile UUID 2b7c4080-0ddd-46c5-8f23-563fd3ba789d, and symlinking /etc/profile.d/vte-2.91.sh to vte.sh for OSC 7 / prompt-markers. Not for VirtualBox VMSVGA gotchas, shell-script conventions, or installer trust verification.
+description: Use when shaping the XFCE/LightDM/GTK guest experience without an active D-Bus session: writing xfconf channel XML for xfwm4.xml, xsettings.xml, xfce4-panel.xml, xfce4-power-manager.xml, xfce4-keyboard-shortcuts.xml, xfce4-notifyd.xml, using dconf compile (NOT dconf load — provisioning has no session bus) to build ~/.config/dconf/user from keyfiles for Tilix and Mousepad, rewriting tilix.dconf section headers from [/] to [com/gexperts/Tilix], configuring LightDM autologin with runtime detection of xfce.desktop vs xfce4.desktop, deploying lightdm-gtk-greeter.conf (Arc-Dark + Papirus-Dark + Noto Sans), shadowing light-locker.desktop with Hidden=true, working around the Papirus-Dark icon inheritance gap (inherits from breeze-dark,hicolor) by symlinking utilities-terminal.svg into the user-XDG hicolor overlay, holding Tilix profile UUID 2b7c4080-0ddd-46c5-8f23-563fd3ba789d, and symlinking /etc/profile.d/vte-2.91.sh to vte.sh for OSC 7 / prompt-markers. Not for VirtualBox VMSVGA gotchas, shell-script conventions, or installer trust verification.
 user-invocable: false
 metadata:
   pattern: tool-wrapper
   source_files:
     - "scripts/40-xfce-base.sh"
     - "scripts/41-xfce-theme.sh"
+    - "scripts/45-desktop-extras.sh"
     - "scripts/60-apps-tilix-mousepad.sh"
     - "assets/xfwm4.xml"
     - "assets/xsettings.xml"
@@ -14,7 +15,9 @@ metadata:
     - "assets/xfce4-power-manager.xml"
     - "assets/tilix.dconf"
     - "assets/lightdm-gtk-greeter.conf"
-  updated: "2026-05-17"
+    - "assets/xfce4-keyboard-shortcuts.xml"
+    - "assets/xfce4-notifyd.xml"
+  updated: "2026-06-03"
 ---
 
 # XFCE Desktop Config
@@ -24,7 +27,7 @@ Use `dconf compile` (NOT `dconf load` or `gsettings set`) to write Tilix and Mou
 </constraint>
 
 <constraint>
-`dconf compile` REPLACES the entire output database. Do NOT add `|| true` to the compile command — a silent failure means Tilix opens with default ugly theme, which looks like a broken box. Fail loud. Source: `scripts/60-apps-tilix-mousepad.sh:59-62`.
+`dconf compile` REPLACES the entire output database (full GVDB rebuild, not a merge), so it runs only on the FIRST provision — guarded by `[ ! -f /var/lib/vagrant-provisioned ]` — to avoid wiping the user's desktop prefs on re-provision. Do NOT add `|| true` to the compile command — a silent failure means Tilix opens with default ugly theme, which looks like a broken box. Fail loud. Source: `scripts/60-apps-tilix-mousepad.sh`.
 </constraint>
 
 <constraint>
@@ -197,7 +200,7 @@ Source: `scripts/60-apps-tilix-mousepad.sh:71-83`. Debian ships `/etc/profile.d/
 
 ## Gotchas
 
-**`dconf compile` replaces the entire user dconf database**: any manual Tilix or Mousepad settings changed inside the VM are overwritten on the next `vagrant provision`. Unlike `dconf load` (which merges), compile writes a completely new binary database. Source: `scripts/60-apps-tilix-mousepad.sh:29-31`.
+**`dconf compile` replaces the entire user dconf database**: it writes a completely new binary database (unlike `dconf load`, which merges). To keep that from wiping settings the user changed in the VM, the compile runs only on the FIRST provision — guarded by `[ ! -f /var/lib/vagrant-provisioned ]`; re-provisioning skips it. Source: `scripts/60-apps-tilix-mousepad.sh`.
 
 **Hardcoding `xfce` or `xfce4` in LightDM conf**: breaks autologin on the Debian version where the XFCE session has the other name. Always use the runtime detection. Source: `scripts/40-xfce-base.sh:15-16`.
 

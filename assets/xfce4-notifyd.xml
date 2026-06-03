@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xfce4-notifyd" version="1.0">
+  <!-- "Disappear after N seconds" override: keep notification toasts (e.g. the
+       screenshot confirmation) brief instead of lingering. Value is in seconds
+       (the settings dialog's spin button is labelled "seconds"). -->
+  <property name="expire-timeout" type="int" value="2"/>
+  <property name="expire-timeout-enabled" type="bool" value="true"/>
+</channel>

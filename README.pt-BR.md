@@ -92,7 +92,7 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 - **Tilix** com 4% de transparência como terminal padrão no dock.
 - **Mousepad** com tema Solarized Dark e números de linha ativados.
 - **Áudio habilitado** — saída de som via Intel HD Audio (sem microfone).
-- **Senha** do usuário `vagrant`: `docks`.
+- **Senha** do usuário `vagrant`: `vagrant` (definida apenas no primeiro provisionamento; troque à vontade depois — reprovisionar não redefine).
 - **Git config** — `init.defaultBranch` definido como `main`. Lembre-se de configurar `user.name` e `user.email`.
 - **Config de agentes** — configurações `.claude` e `.codex` sincronizadas automaticamente do repositório SSOT (`DocksDocks/public`) no primeiro provisionamento.
 - **Timezone** configurado para `America/Sao_Paulo` (UTC-3).

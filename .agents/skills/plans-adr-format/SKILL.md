@@ -1,13 +1,13 @@
 ---
 name: plans-adr-format
-description: Use when authoring or reviewing a design decision record under plans/ — the NNNN-kebab-case.md naming (0001-clipboard-supervisor.md, 0002-split-vagrantfile.md as the two reference exemplars), the required section structure (Status Accepted/Proposed/Superseded — Branch — Scope — Problem — Root cause — Decision — Alternatives considered as a markdown table — How it's enabled at provision time — Verification steps — Files changed), citing upstream Oracle / NixOS / community-forum bug references inline (VBox #5266, VBox #19234, NixOS/nixpkgs#65542, VirtualBox/virtualbox#568, VBox #15417), and pre-flight repo-safety checklists when a decision flips repo visibility (no PATs, AWS keys, real emails, only the intentional vagrant:docks credential). Not for skill authoring, README/CLAUDE.md edits, or per-script implementation comments.
+description: Use when authoring or reviewing a design decision record under plans/ — the NNNN-kebab-case.md naming (0001-clipboard-supervisor.md, 0002-split-vagrantfile.md as the two reference exemplars), the required section structure (Status Accepted/Proposed/Superseded — Branch — Scope — Problem — Root cause — Decision — Alternatives considered as a markdown table — How it's enabled at provision time — Verification steps — Files changed), citing upstream Oracle / NixOS / community-forum bug references inline (VBox #5266, VBox #19234, NixOS/nixpkgs#65542, VirtualBox/virtualbox#568, VBox #15417), and pre-flight repo-safety checklists when a decision flips repo visibility (no PATs, AWS keys, real emails, only the default vagrant:vagrant VM password). Not for skill authoring, README/CLAUDE.md edits, or per-script implementation comments.
 user-invocable: false
 metadata:
   pattern: tool-wrapper
   source_files:
     - "plans/0001-clipboard-supervisor.md"
     - "plans/0002-split-vagrantfile.md"
-  updated: "2026-05-03"
+  updated: "2026-06-03"
 ---
 
 # Plans ADR Format
@@ -82,7 +82,7 @@ Required before any plan that could expose secrets:
 ```
 - [ ] No private keys, tokens, API keys, PATs in tracked files or git history
 - [ ] No real email addresses (other than intentional public ones)
-- [ ] Only intentional credential: vagrant:docks VM password
+- [ ] Only intentional credential: default vagrant:vagrant VM password
 - [ ] SSH keypair generated inside guest at provision time (never in repo)
 - [ ] git log --all --diff-filter=D (no deleted files containing secrets)
 ```

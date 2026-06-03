@@ -26,9 +26,12 @@ export DEBIAN_FRONTEND=noninteractive
 # user db is the same format at ~/.config/dconf/user. We collect both Mousepad
 # and Tilix settings as keyfiles in a temp dir and compile them in one shot.
 #
-# Caveat: dconf compile *replaces* the output db. That's fine here because
-# both apps' settings live in this single payload, and any user-level dconf
-# changes during provisioning would be wiped on re-provision anyway.
+# Caveat: dconf compile *replaces* the output db (a full GVDB rebuild, not a
+# merge), so it would wipe any desktop prefs you've changed since first boot
+# (org/gnome/desktop/{mouse,sound,interface}, …) on every re-provision. To
+# avoid that, the compile below runs only on the FIRST provision (guarded by
+# the /var/lib/vagrant-provisioned sentinel that 99-finalize.sh creates) and is
+# never re-run afterward.
 #
 # Format conversion: tilix.dconf uses `dconf load` syntax (`[/]` for the
 # subtree root, `[profiles/UUID]` for nested paths). Keyfile syntax for
@@ -56,10 +59,16 @@ sed -e 's|^\[/\]$|[com/gexperts/Tilix]|' \
 
 install -d -o vagrant -g vagrant /home/vagrant/.config/dconf
 chown -R vagrant:vagrant "$KEYFILES_DIR"
-# No `|| true`: this is the custom palette + font. Silent failure means the
-# user opens Tilix, sees the default ugly theme, and assumes the box is
-# broken. Fail loud so a regression is visible in the provision log.
-runuser -u vagrant -- dconf compile /home/vagrant/.config/dconf/user "$KEYFILES_DIR"
+# Run-once guard (see "Caveat" above): seed only on the first provision so
+# re-provisioning never overwrites desktop prefs you've changed since first boot.
+if [ ! -f /var/lib/vagrant-provisioned ]; then
+  # No `|| true`: this is the custom palette + font. Silent failure means the
+  # user opens Tilix, sees the default ugly theme, and assumes the box is
+  # broken. Fail loud so a regression is visible in the provision log.
+  runuser -u vagrant -- dconf compile /home/vagrant/.config/dconf/user "$KEYFILES_DIR"
+else
+  echo ">> Already provisioned — skipping Tilix/Mousepad dconf seed to preserve your settings."
+fi
 
 # ── VTE shell integration (silences "Configuration Issue Detected" dialog) ──
 # Tilix requires VTE's bash hooks (OSC 7 cwd tracking, prompt markers) sourced
