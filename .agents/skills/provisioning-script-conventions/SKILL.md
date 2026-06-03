@@ -12,6 +12,7 @@ metadata:
     - "scripts/30-guest-additions.sh"
     - "scripts/40-xfce-base.sh"
     - "scripts/41-xfce-theme.sh"
+    - "scripts/45-desktop-extras.sh"
     - "scripts/50-vboxclient-supervisor.sh"
     - "scripts/51-vbox-autoresize.sh"
     - "scripts/60-apps-tilix-mousepad.sh"

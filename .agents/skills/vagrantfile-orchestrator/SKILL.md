@@ -69,6 +69,7 @@ SCRIPTS = %w[
   30-guest-additions
   40-xfce-base
   41-xfce-theme
+  45-desktop-extras
   50-vboxclient-supervisor
   51-vbox-autoresize
   55-permissions

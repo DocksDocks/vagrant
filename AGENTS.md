@@ -29,6 +29,7 @@ The `Vagrantfile` (~300 lines) handles host-side resource detection and the Virt
    - `30-guest-additions.sh` — VBox Guest Additions from ISO (idempotent: skips if VBoxClient is present).
    - `40-xfce-base.sh` — LightDM autologin, panel/dock layout, Chrome as default browser, Chrome no-GPU policy.
    - `41-xfce-theme.sh` — Arc-Dark + Papirus + Noto Sans + Tilix CloseDialog icon overlay.
+   - `45-desktop-extras.sh` — Ubuntu-style PrtSc (deploys the `screenshot-region` wrapper → `/usr/local/bin`, chmod 0755, and seeds `xfce4-keyboard-shortcuts.xml` to `/etc/xdg` binding `Print` to it: region-select → save to `~/Pictures/Screenshots` + copy to clipboard, no dialogs) and pins Downloads + Pictures in the Thunar sidebar (idempotent GTK bookmarks). Seed-only for shortcuts, so it never clobbers a user's customised `~/.config` copy.
    - `50-vboxclient-supervisor.sh` — supervised systemd --user units for clipboard/drag-n-drop + 2-min healthcheck timer (recovers the silently-dead HGCM↔X11 bridge without needing a screen-unlock signal).
    - `51-vbox-autoresize.sh` — xev-based auto-resize workaround for VBox GA #568.
    - `60-apps-tilix-mousepad.sh` — dconf-compile of Tilix + Mousepad settings, VTE shell-integration in `~/.bashrc`.

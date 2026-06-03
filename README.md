@@ -80,6 +80,8 @@ Works on Windows, macOS, and Linux. You can override the values by editing `vm_m
 - **Single bottom panel** — whiskermenu (left), centered dock with Docklike (pinned app icons that also show open windows, like Ubuntu's dock), systray and clock (right). No top bar.
 - **Pinned dock apps** — Chrome, Thunar, Tilix, Mousepad ready with one click. Open apps merge into their dock icon.
 - **Arc-Dark theme** + **Papirus-Dark icons** + **Noto Sans font** + **DMZ-White cursor** — a clean modern dark look. Compositor enabled under VMSVGA.
+- **Ubuntu-style screenshots** — press **PrtSc** to drag-select a region; it's auto-saved to `~/Pictures/Screenshots` and copied to the clipboard in one go, no chooser or save dialog. (Shift+PrtSc still does a region capture with the save dialog; Alt+PrtSc grabs the active window.)
+- **Downloads and Pictures pinned** in the Thunar sidebar (file-manager Places).
 - **Bidirectional clipboard and drag-and-drop** between host and VM (supervised systemd user units; survives X-event storms).
 - **Google Chrome** pre-installed for in-VM browsing, with hardware-acceleration disabled via managed policy (avoids Chrome's deadlock under VMSVGA).
 - **ED25519 SSH key** generated at `~/.ssh/id_ed25519` — public key is printed at the end of provisioning so you can paste it into GitHub/GitLab.
@@ -192,6 +194,7 @@ Then run `vagrant reload` to apply.
 │   ├── 30-guest-additions.sh
 │   ├── 40-xfce-base.sh
 │   ├── 41-xfce-theme.sh
+│   ├── 45-desktop-extras.sh
 │   ├── 50-vboxclient-supervisor.sh
 │   ├── 51-vbox-autoresize.sh
 │   ├── 55-permissions.sh
