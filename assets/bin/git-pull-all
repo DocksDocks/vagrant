@@ -2,7 +2,9 @@
 # git-pull-all — fetch + fast-forward every git repo under a directory tree.
 #
 # Walks DIR, finds every repository (a directory containing .git/) at any depth,
-# and on each runs `git fetch --all --prune` then `git pull --ff-only`.
+# and on each runs `git fetch --all --prune` then `git pull --ff-only`. Repos
+# are processed concurrently (see -j); output is buffered per repo and printed
+# in a stable order so parallel runs never garble the report.
 # Repos that can't be safely fast-forwarded are still fetched, never pulled, and
 # reported so you can deal with them by hand:
 #   • dirty working tree   • no upstream    • detached HEAD
@@ -15,6 +17,7 @@
 #   git-pull-all [OPTIONS] [DIR]
 #
 # Options:
+#   -j, --jobs N       Process up to N repos concurrently (default 8; 1 = serial).
 #   -f, --fetch-only   Fetch and prune only; never pull.
 #   -q, --quiet        Only print repos that changed or need attention.
 #   -n, --dry-run      Report what would happen; touch nothing.
@@ -29,6 +32,11 @@
 # whole run.
 set -uo pipefail
 
+# Never block on an interactive credential prompt — fatal when N fetches run at
+# once (they'd all queue for the same tty). git fails fast instead; we report it.
+export GIT_TERMINAL_PROMPT=0
+
+jobs=8
 fetch_only=0
 quiet=0
 dry_run=0
@@ -38,17 +46,25 @@ root=""
 # ── Argument parsing ────────────────────────────────────
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -j|--jobs)       shift; jobs="${1:-}" ;;
+    --jobs=*)        jobs="${1#*=}" ;;
+    -j*)             jobs="${1#-j}" ;;
     -f|--fetch-only) fetch_only=1 ;;
     -q|--quiet)      quiet=1 ;;
     -n|--dry-run)    dry_run=1 ;;
     --no-color)      use_color=0 ;;
-    -h|--help)       sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)       sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     --)              shift; root="${1:-}"; break ;;
     -*)              echo "git-pull-all: unknown option '$1'" >&2; exit 2 ;;
     *)               root="$1" ;;
   esac
   shift
 done
+
+if ! [[ "$jobs" =~ ^[0-9]+$ ]] || (( jobs < 1 )); then
+  echo "git-pull-all: --jobs must be a positive integer (got '$jobs')" >&2
+  exit 2
+fi
 
 root="${root:-.}"
 if [[ ! -d "$root" ]]; then
@@ -82,7 +98,7 @@ fi
 
 # Column width for aligned output (relative repo name).
 name_of() {
-  local d="${1%/.git}" n="${1%/.git}"
+  local d="${1%/.git}" n
   n="${d#"$root"/}"
   [[ "$n" == "$d" ]] && n="$(basename "$d")"
   printf '%s' "$n"
@@ -92,90 +108,118 @@ for g in "${repos[@]}"; do
   n="$(name_of "$g")"; (( ${#n} > width )) && width=${#n}
 done
 
-printf '%s==>%s scanning %s%s%s — %s%d%s repositories\n' \
-  "$BOLD" "$RST" "$CYN" "$root" "$RST" "$BOLD" "${#repos[@]}" "$RST"
+(( jobs > ${#repos[@]} )) && jobs=${#repos[@]}
+printf '%s==>%s scanning %s%s%s — %s%d%s repositories, up to %s%d%s parallel\n' \
+  "$BOLD" "$RST" "$CYN" "$root" "$RST" "$BOLD" "${#repos[@]}" "$RST" "$BOLD" "$jobs" "$RST"
 [[ $dry_run -eq 1 ]] && printf '%s    (dry-run: nothing will be modified)%s\n' "$DIM" "$RST"
 echo
 
-updated=0 uptodate=0 skipped=0 failed=0
-attention=()
-
-# ── Process each repo ───────────────────────────────────
-for g in "${repos[@]}"; do
+# ── Per-repo worker ─────────────────────────────────────
+# Runs in a background subshell. Buffers all display output to $tmp/$idx.out and
+# writes a "category<TAB>attention" line to $tmp/$idx.status. The parent shell
+# can't see subshell variables, so the status file IS the return channel.
+process_repo() {
+  local g="$1" idx="$2" tmp="$3"
+  local out="$tmp/$idx.out" st="$tmp/$idx.status"
+  local dir name branch detached behind ahead posn line fetch_err pull_err
   dir="${g%/.git}"
   name="$(name_of "$g")"
+  : > "$out"
   q() { git -C "$dir" "$@" 2>/dev/null; }
+  # shellcheck disable=SC2059  # callers always pass a literal format string
+  emit() { printf "$@" >> "$out"; }
+  finish() { printf '%s\t%s\n' "$1" "${2:-}" > "$st"; }
 
   branch="$(q symbolic-ref --quiet --short HEAD)" || branch=""
-  [[ -z "$branch" ]] && branch="$(q rev-parse --short HEAD 2>/dev/null)" && detached=1 || detached=0
-
+  if [[ -n "$branch" ]]; then detached=0; else branch="$(q rev-parse --short HEAD)"; detached=1; fi
   line="$(printf '%s%-*s%s  %s%-18s%s' "$BOLD" "$width" "$name" "$RST" "$BLU" "${branch:-?}" "$RST")"
 
-  # No remote → nothing to do.
   if [[ -z "$(q remote)" ]]; then
-    [[ $quiet -eq 0 ]] && printf '%s  %sno remote%s\n' "$line" "$DIM" "$RST"
-    ((skipped++)); continue
+    [[ $quiet -eq 0 ]] && emit '%s  %sno remote%s\n' "$line" "$DIM" "$RST"
+    finish skipped; return
   fi
 
   if [[ $dry_run -eq 1 ]]; then
-    action="fetch + pull --ff-only"; [[ $fetch_only -eq 1 ]] && action="fetch only"
-    printf '%s  %swould %s%s\n' "$line" "$DIM" "$action" "$RST"
-    continue
+    local action="fetch + pull --ff-only"; [[ $fetch_only -eq 1 ]] && action="fetch only"
+    emit '%s  %swould %s%s\n' "$line" "$DIM" "$action" "$RST"
+    finish dry; return
   fi
 
-  # ── Fetch ──
   if ! fetch_err="$(git -C "$dir" fetch --all --prune 2>&1)"; then
-    printf '%s  %s✘ fetch failed%s\n' "$line" "$RED" "$RST"
-    printf '%s      %s%s\n' "$DIM" "${fetch_err##*$'\n'}" "$RST"
-    ((failed++)); attention+=("$name — fetch failed")
-    continue
+    emit '%s  %s✘ fetch failed%s\n' "$line" "$RED" "$RST"
+    emit '%s      %s%s\n' "$DIM" "${fetch_err##*$'\n'}" "$RST"
+    finish failed "$name — fetch failed"; return
   fi
 
   if [[ $fetch_only -eq 1 ]]; then
-    [[ $quiet -eq 0 ]] && printf '%s  %s✔ fetched%s\n' "$line" "$GRN" "$RST"
-    continue
+    [[ $quiet -eq 0 ]] && emit '%s  %s✔ fetched%s\n' "$line" "$GRN" "$RST"
+    finish fetched; return
   fi
 
-  # ── Decide whether a pull is safe ──
   if [[ $detached -eq 1 ]]; then
-    [[ $quiet -eq 0 ]] && printf '%s  %s✔ fetched%s %s(detached HEAD, not pulled)%s\n' "$line" "$GRN" "$RST" "$YEL" "$RST"
-    ((skipped++)); attention+=("$name — detached HEAD"); continue
+    [[ $quiet -eq 0 ]] && emit '%s  %s✔ fetched%s %s(detached HEAD, not pulled)%s\n' "$line" "$GRN" "$RST" "$YEL" "$RST"
+    finish skipped "$name — detached HEAD"; return
   fi
 
   if ! q rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null; then
-    [[ $quiet -eq 0 ]] && printf '%s  %s✔ fetched%s %s(no upstream)%s\n' "$line" "$GRN" "$RST" "$YEL" "$RST"
-    ((skipped++)); attention+=("$name — no upstream set"); continue
+    [[ $quiet -eq 0 ]] && emit '%s  %s✔ fetched%s %s(no upstream)%s\n' "$line" "$GRN" "$RST" "$YEL" "$RST"
+    finish skipped "$name — no upstream set"; return
   fi
 
-  # left=behind (in upstream, not HEAD), right=ahead (in HEAD, not upstream)
   read -r behind ahead < <(q rev-list --left-right --count "@{u}...HEAD")
   behind=${behind:-0}; ahead=${ahead:-0}
   posn=""; (( ahead > 0 || behind > 0 )) && posn="$(printf '%s↑%s%s ↓%s%s' "$DIM" "$ahead" "$RST" "$behind" "$RST")"
 
   if [[ -n "$(q status --porcelain)" ]]; then
-    printf '%s  %s✔ fetched%s %s(uncommitted changes — not pulled)%s %s\n' "$line" "$GRN" "$RST" "$YEL" "$RST" "$posn"
-    ((skipped++)); attention+=("$name — dirty working tree (behind $behind)"); continue
+    emit '%s  %s✔ fetched%s %s(uncommitted changes — not pulled)%s %s\n' "$line" "$GRN" "$RST" "$YEL" "$RST" "$posn"
+    finish skipped "$name — dirty working tree (behind $behind)"; return
   fi
 
   if (( behind == 0 )); then
-    [[ $quiet -eq 0 ]] && printf '%s  %s✔ up to date%s %s\n' "$line" "$GRN" "$RST" "$posn"
-    ((uptodate++)); continue
+    [[ $quiet -eq 0 ]] && emit '%s  %s✔ up to date%s %s\n' "$line" "$GRN" "$RST" "$posn"
+    finish uptodate; return
   fi
 
   if (( ahead > 0 )); then
-    printf '%s  %s⚠ diverged — cannot fast-forward%s %s\n' "$line" "$YEL" "$RST" "$posn"
-    ((skipped++)); attention+=("$name — diverged (ahead $ahead, behind $behind)"); continue
+    emit '%s  %s⚠ diverged — cannot fast-forward%s %s\n' "$line" "$YEL" "$RST" "$posn"
+    finish skipped "$name — diverged (ahead $ahead, behind $behind)"; return
   fi
 
-  # ── Fast-forward pull ──
   if pull_err="$(git -C "$dir" pull --ff-only --quiet 2>&1)"; then
-    printf '%s  %s⬇ fast-forwarded%s %s%s(+%d)%s\n' "$line" "$GRN" "$RST" "$posn" "$DIM" "$behind" "$RST"
-    ((updated++))
+    emit '%s  %s⬇ fast-forwarded%s %s%s(+%d)%s\n' "$line" "$GRN" "$RST" "$posn" "$DIM" "$behind" "$RST"
+    finish updated
   else
-    printf '%s  %s✘ pull failed%s\n' "$line" "$RED" "$RST"
-    printf '%s      %s%s\n' "$DIM" "${pull_err##*$'\n'}" "$RST"
-    ((failed++)); attention+=("$name — pull failed")
+    emit '%s  %s✘ pull failed%s\n' "$line" "$RED" "$RST"
+    emit '%s      %s%s\n' "$DIM" "${pull_err##*$'\n'}" "$RST"
+    finish failed "$name — pull failed"
   fi
+}
+
+# ── Run workers with a concurrency cap ──────────────────
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/git-pull-all.XXXXXX")"
+trap 'rm -rf "$tmp"' EXIT
+
+idx=0
+for g in "${repos[@]}"; do
+  process_repo "$g" "$idx" "$tmp" &
+  ((++idx))
+  # Block until a slot frees up before launching the next worker.
+  while (( $(jobs -r | wc -l) >= jobs )); do wait -n; done
+done
+wait
+
+# ── Aggregate buffered output in repo order ─────────────
+updated=0 uptodate=0 skipped=0 failed=0
+attention=()
+for ((i = 0; i < idx; i++)); do
+  [[ -s "$tmp/$i.out" ]] && cat "$tmp/$i.out"
+  IFS=$'\t' read -r category attn < "$tmp/$i.status" 2>/dev/null || category=""
+  case "$category" in
+    updated)  ((updated++)) ;;
+    uptodate) ((uptodate++)) ;;
+    skipped)  ((skipped++));  [[ -n "${attn:-}" ]] && attention+=("$attn") ;;
+    failed)   ((failed++));   [[ -n "${attn:-}" ]] && attention+=("$attn") ;;
+  esac
 done
 
 # ── Summary ─────────────────────────────────────────────

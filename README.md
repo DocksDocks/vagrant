@@ -84,7 +84,7 @@ Works on Windows, macOS, and Linux. You can override the values by editing `vm_m
 - **Google Chrome** pre-installed for in-VM browsing, with hardware-acceleration disabled via managed policy (avoids Chrome's deadlock under VMSVGA).
 - **ED25519 SSH key** generated at `~/.ssh/id_ed25519` — public key is printed at the end of provisioning so you can paste it into GitHub/GitLab.
 - **`~/projects`** — directory for your projects, pre-created.
-- **`git-pull-all`** — fetch + fast-forward every repo under a directory tree (defaults to the current dir). Run `git-pull-all ~/projects` to update them all at once; dirty, diverged, or upstream-less repos are fetched but never force-pulled, and reported at the end. Use `-f`/`--fetch-only` to fetch without pulling. `git pull-all` dispatches to the same command.
+- **`git-pull-all`** — fetch + fast-forward every repo under a directory tree (defaults to the current dir). Run `git-pull-all ~/projects` to update them all at once; dirty, diverged, or upstream-less repos are fetched but never force-pulled, and reported at the end. Repos are updated concurrently (default 8 at a time, `-j N` to tune, `-j1` for serial) — on ~16 repos that's roughly 7× faster than one-by-one. Use `-f`/`--fetch-only` to fetch without pulling. `git pull-all` dispatches to the same command.
 - **Aliases** — `pf` (~/projects), `fd` (fdfind), `bat` (batcat).
 - **Docker without sudo** — the `vagrant` user is in the `docker` group.
 - **direnv** — hook installed in `.bashrc` so `.envrc` files load automatically.

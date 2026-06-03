@@ -49,7 +49,7 @@ The `Vagrantfile` (~300 lines) handles host-side resource detection and the Virt
 
 ## Installed Tools
 
-**CLI:** Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions (curl, mbstring, xml, zip, bcmath, intl), Composer (SHA-384 verified at install), Docker + Compose v2 plugin + Buildx + containerd.io, Node.js LTS (nvm), npm, pnpm, Claude Code, Codex CLI, ShellCheck, jq, yq, ripgrep, build-essential, fzf, bat (alias `bat`→`batcat`), fd-find (alias `fd`→`fdfind`), htop, btop, tree, direnv, `git-pull-all` (bulk fetch + ff-only pull across a directory tree; also runs as `git pull-all`), superfile (`spf`), wget, zip, unzip, rsync, xclip.
+**CLI:** Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions (curl, mbstring, xml, zip, bcmath, intl), Composer (SHA-384 verified at install), Docker + Compose v2 plugin + Buildx + containerd.io, Node.js LTS (nvm), npm, pnpm, Claude Code, Codex CLI, ShellCheck, jq, yq, ripgrep, build-essential, fzf, bat (alias `bat`→`batcat`), fd-find (alias `fd`→`fdfind`), htop, btop, tree, direnv, `git-pull-all` (parallel bulk fetch + ff-only pull across a directory tree, `-j N` jobs; also runs as `git pull-all`), superfile (`spf`), wget, zip, unzip, rsync, xclip.
 
 **Desktop:** XFCE 4 (panel, whiskermenu, docklike, taskmanager, notifyd, screenshooter), Tilix (split-pane terminal — default), Mousepad (text editor), LightDM + lightdm-gtk-greeter, Google Chrome, dbus-x11, xdg-utils, pulseaudio + alsa-utils, JetBrainsMono Nerd Font, fonts-noto + noto-color-emoji, Arc-Dark theme, Papirus + Papirus-Dark icons, DMZ-Cursor.
 

@@ -83,7 +83,7 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 - **Google Chrome** pré-instalado para navegação dentro da VM.
 - **Chave SSH ED25519** gerada em `~/.ssh/id_ed25519` — a chave pública é exibida no terminal ao final do provisionamento para você copiar direto pro GitHub/GitLab.
 - **`~/projects`** — diretório para seus projetos, já criado.
-- **`git-pull-all`** — faz fetch + fast-forward de todos os repos sob um diretório (padrão: o diretório atual). Rode `git-pull-all ~/projects` para atualizar todos de uma vez; repos com alterações não commitadas, divergentes ou sem upstream são apenas atualizados via fetch (nunca puxados à força) e listados no resumo final. Use `-f`/`--fetch-only` para só fazer fetch. `git pull-all` chama o mesmo comando.
+- **`git-pull-all`** — faz fetch + fast-forward de todos os repos sob um diretório (padrão: o diretório atual). Rode `git-pull-all ~/projects` para atualizar todos de uma vez; repos com alterações não commitadas, divergentes ou sem upstream são apenas atualizados via fetch (nunca puxados à força) e listados no resumo final. Os repos são atualizados em paralelo (8 por vez por padrão, `-j N` para ajustar, `-j1` para serial) — em ~16 repos fica cerca de 7× mais rápido que um a um. Use `-f`/`--fetch-only` para só fazer fetch. `git pull-all` chama o mesmo comando.
 - **Aliases** — `pf` (~/projects), `fd` (fdfind), `bat` (batcat).
 - **Docker sem sudo** — o usuário `vagrant` já está no grupo `docker`.
 - **direnv** — hook ativado no `.bashrc` para carregar `.envrc` automaticamente.
