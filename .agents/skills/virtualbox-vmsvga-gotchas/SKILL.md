@@ -25,7 +25,7 @@ metadata:
     - "plans/0003-vboxclient-xsession-divert.md"
     - "plans/0004-clipboard-healthcheck-timer.md"
     - "CLAUDE.md"
-  updated: "2026-05-27"
+  updated: "2026-06-03"
 ---
 
 # VirtualBox VMSVGA Gotchas
@@ -174,6 +174,8 @@ Source: `assets/vbox-autoresize.desktop:4`. VBox GA 7.2.6 kernel modules build c
 **Clipboard stops working**: `VBoxClient --clipboard` terminated silently (Oracle bug #5266). Recovery: `systemctl --user restart vbox-clipboard.service`. If recovery fails repeatedly, check that the WantedBy symlinks in `~/.config/systemd/user/default.target.wants/` exist.
 
 **Auto-resize not working after VM reboot**: the xev-based `vbox-autoresize.desktop` autostart must have loaded. Check `systemctl --user status` and that `assets/vbox-autoresize.desktop` was deployed by `scripts/51-vbox-autoresize.sh`.
+
+**Clipboard / `/vagrant` mount / auto-resize all dead after `apt upgrade` + reboot**: a kernel bump leaves the GA modules (`vboxguest`, `vboxsf`, `vboxvideo`) unbuilt for the new kernel. The `vboxadd.service` boot rebuild and the dkms kernel-postinst rebuild both need `linux-headers-amd64` + `dkms` + a compiler — but `bento/debian-13` ships GA pre-installed, so the `30-guest-additions.sh` skip-guard once bypassed installing them, and `apt autoremove` strips them (auto-marked on the base box), silently disarming the self-heal. `30-guest-additions.sh` now installs and `apt-mark manual`s `linux-headers-amd64 dkms` **unconditionally, before the guard**. Recover a box that already lost them: `sudo apt install linux-headers-amd64 dkms && sudo /sbin/rcvboxadd setup` (rebuilds modules for all installed kernels), or `FORCE_REINSTALL=1 vagrant provision`.
 
 **Chrome freezing**: managed policy file missing or not applied at Machine scope. Verify `chrome://policy` shows `HardwareAccelerationModeEnabled = false` with Machine scope and status OK. If absent, re-run `scripts/40-xfce-base.sh` or check `fetch_asset chrome-policy-no-gpu.json`.
 

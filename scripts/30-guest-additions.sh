@@ -9,6 +9,19 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
+# Guest Additions rebuild their kernel modules against a new kernel two ways:
+# the vboxadd service runs `vboxadd setup` on boot, and dkms triggers a rebuild
+# from the kernel package's postinst. Both need linux-headers-amd64 (the meta,
+# so matching headers land for every kernel it pulls) + dkms + a compiler.
+# bento/debian-13 ships GA pre-installed, so the guard below skips the ISO path
+# on every normal provision — meaning these prerequisites would otherwise never
+# be guaranteed. Install them unconditionally and mark them manual so a stray
+# `apt autoremove` can't strip the self-heal and leave the next `apt upgrade`
+# kernel bump unable to rebuild vboxguest/vboxsf (clipboard, shared folders,
+# and auto-resize all break until rebuilt). See AGENTS.md "Common Issues".
+apt-get install -y -qq linux-headers-amd64 dkms
+apt-mark manual linux-headers-amd64 dkms >/dev/null
+
 if [[ "${FORCE_REINSTALL:-0}" != "1" ]] && command -v VBoxClient >/dev/null 2>&1; then
   echo ">> VirtualBox Guest Additions already installed — skipping (set FORCE_REINSTALL=1 to redo)."
   systemctl enable vboxadd-service 2>/dev/null || true
@@ -17,7 +30,6 @@ fi
 
 # ── VirtualBox Guest Additions (clipboard + auto-resize) ──
 echo ">> Instalando VirtualBox Guest Additions..."
-apt-get install -y -qq linux-headers-amd64 dkms
 # Extract just the leading semver-shaped portion from whatever VBoxControl
 # reports — "7.2.6r170137", "7.2.6-rc1", "7.2.6_Beta1" all collapse to "7.2.6".
 # bento boxes always write /home/vagrant/.vbox_version during box build, so
