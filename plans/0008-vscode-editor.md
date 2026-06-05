@@ -30,9 +30,11 @@ also not in Debian's repos — it needs Microsoft's apt repo.
 2. **Settings live in this repo.** `assets/vscode/settings.json` →
    `~/.config/Code/User/settings.json`, **first-provision-only** (guarded by
    `/var/lib/vagrant-provisioned`) so GUI changes are preserved on re-provision.
-   Shipped with a sensible Night Owl default; the user replaces it with their
-   host file (`~/.config/Code/User/settings.json` on Linux, the
-   `Application Support` / `%APPDATA%` paths elsewhere) and re-provisions.
+   Seeded with the maintainer's actual synced config (pulled from VS Code
+   Settings Sync, 2026-06-05); anyone else replaces it with their host file
+   (`~/.config/Code/User/settings.json` on Linux, the `Application Support` /
+   `%APPDATA%` paths elsewhere) and re-provisions. The one machine-specific
+   `remote.SSH.remotePlatform` host IP is redacted from the committed copy.
 3. **Extensions from a repo-managed list.** `assets/vscode/extensions.txt` (one
    ID per line, `#`-comments ignored) is looped through `code --install-extension`
    as vagrant, every provision (idempotent — already-installed extensions are
@@ -45,6 +47,15 @@ also not in Debian's repos — it needs Microsoft's apt repo.
    GtkSourceView scheme added for it in 0007 (`assets/gtksourceview/night-owl.xml`
    + its deploy), swap the docklike pin and the `text/plain` default handler from
    `org.xfce.mousepad.desktop` to `code.desktop`.
+5. **Persist the GitHub sign-in (`password-store: basic`).** LightDM autologin is
+   passwordless, so gnome-keyring's "login" collection is never unlocked and VS
+   Code's Settings-Sync token lands in the throwaway in-memory keyring — lost on
+   every reload, forcing a fresh GitHub sign-in each time
+   ([microsoft/vscode#120392](https://github.com/microsoft/vscode/issues/120392)).
+   `66-vscode.sh` seeds `~/.vscode/argv.json` with `"password-store": "basic"` so
+   Electron persists secrets in an app-level encrypted file instead. Seeded only
+   if `argv.json` is absent (VS Code merges its own `crash-reporter-id` on first
+   launch), so an existing file is never clobbered.
 
 ## Alternatives considered
 
@@ -75,9 +86,11 @@ also not in Debian's repos — it needs Microsoft's apt repo.
 
 - `10-apt-repos.sh` — adds the Microsoft `packages.microsoft.com/repos/code` apt
   source + key.
-- `20-packages.sh` — installs `code`; no longer installs `mousepad`.
-- `66-vscode.sh` — installs the extension list (every provision) and seeds
-  `settings.json` (first provision only). Skips gracefully if `code` is absent.
+- `20-packages.sh` — installs `code`; no longer installs `mousepad`; removes the
+  duplicate Chrome deb822 source the Chrome `.deb` drops (dedups the apt repo).
+- `66-vscode.sh` — installs the extension list (every provision), seeds
+  `settings.json` (first provision only), and seeds `~/.vscode/argv.json` with
+  `password-store: basic` (only if absent). Skips gracefully if `code` is absent.
 - `40-xfce-base.sh` + `assets/docklike.rc` — VS Code pinned where Mousepad was.
 - `assets/mimeapps.list` — `text/plain` opens in VS Code.
 
@@ -85,9 +98,12 @@ also not in Debian's repos — it needs Microsoft's apt repo.
 
 - `shellcheck -x scripts/{10,20,60,66}-*.sh` → clean (only the expected SC1091
   `_lib.sh` info); `bash -n` OK.
-- `settings.json` body (comments stripped) parses as valid JSON — 14 keys,
-  `workbench.colorTheme = Night Owl`.
-- `extensions.txt` non-comment lines = `sdras.night-owl`.
+- `settings.json` body (comments + trailing commas stripped) parses as valid
+  JSON — 60 keys, `workbench.colorTheme = Night Owl`, `workbench.iconTheme =
+  material-icon-theme`; no `remote.SSH.remotePlatform` (IP redacted).
+- `extensions.txt` — 62 non-comment IDs incl. `sdras.night-owl`.
+- `argv.json` (the seed in `66-vscode.sh` and the live box copy) parses and
+  carries `"password-store": "basic"`.
 - `grep -rni mousepad scripts/ assets/ Vagrantfile` → empty (fully removed).
 - `SCRIPTS` array: `60-tilix`, `65-superfile-fonts`, `66-vscode` in order.
 - Post-`vagrant up` (visual): VS Code pinned on the dock and launches; opening a
@@ -99,15 +115,16 @@ also not in Debian's repos — it needs Microsoft's apt repo.
 Extension installs need the VS Code Marketplace reachable at provision time
 (failures are logged per-extension, not fatal). `settings.json` is seeded once —
 edits made in the GUI survive re-provision, so to push a new baseline from the
-repo you either edit in-VM or `vagrant destroy && up`. The shipped settings are a
-placeholder until the user pastes their own.
+repo you either edit in-VM or `vagrant destroy && up`. `argv.json`'s
+`password-store: basic` stores the GitHub token in an app-level encrypted file
+(fixed key) — fine for this single-user autologin VM, not a hardened secret store.
 
 ## Files changed
 
-- `scripts/66-vscode.sh` (new)
-- `assets/vscode/settings.json` (new), `assets/vscode/extensions.txt` (new)
+- `scripts/66-vscode.sh` (new) — extensions + settings seed + `argv.json` (`password-store: basic`)
+- `assets/vscode/settings.json`, `assets/vscode/extensions.txt` — maintainer's synced config (IP redacted; 62 extensions)
 - `scripts/10-apt-repos.sh` — Microsoft apt repo
-- `scripts/20-packages.sh` — `+code`, `-mousepad`
+- `scripts/20-packages.sh` — `+code`, `-mousepad`, dedup Chrome `.sources`
 - `scripts/60-apps-tilix-mousepad.sh` → `scripts/60-tilix.sh` (rename; Mousepad stripped)
 - `assets/gtksourceview/night-owl.xml` (deleted — was the 0007 Mousepad scheme)
 - `assets/docklike.rc`, `assets/mimeapps.list`, `scripts/40-xfce-base.sh` — dock + default handler

@@ -2,9 +2,70 @@
 # One extension ID per line. Blank lines and #-comments are ignored.
 # Each is installed with: code --install-extension <id>
 #
-# To mirror YOUR host setup, run on your host:
-#   code --list-extensions
-# then paste the IDs below, commit, and re-provision.
+# Synced from the maintainer's host on 2026-06-05 (`code --list-extensions`).
+# To mirror YOUR setup, run `code --list-extensions` on your host, paste the IDs
+# below, commit, and re-provision. This is a large set — trim what you don't use
+# to cut provision time (each extension is a marketplace download).
 
-# Night Owl theme (so "workbench.colorTheme": "Night Owl" in settings.json renders)
+anthropic.claude-code
+atlassian.atlascode
+aykutsarac.jsoncrack-vscode
+bradlc.vscode-tailwindcss
+dbaeumer.vscode-eslint
+dbankier.vscode-quick-select
+devsense.composer-php-vscode
+devsense.intelli-php-vscode
+devsense.phptools-vscode
+devsense.profiler-php-vscode
+docker.docker
+editorconfig.editorconfig
+entuent.fira-code-nerd-font
+esbenp.prettier-vscode
+expo.vscode-expo-tools
+figma.figma-vscode-extension
+github.vscode-github-actions
+google.geminicodeassist
+graphql.vscode-graphql
+graphql.vscode-graphql-syntax
+mechatroner.rainbow-csv
+ms-azuretools.vscode-containers
+ms-azuretools.vscode-docker
+ms-dotnettools.csdevkit
+ms-dotnettools.vscode-dotnet-runtime
+ms-dotnettools.vscodeintellicode-csharp
+ms-python.autopep8
+ms-python.debugpy
+ms-python.python
+ms-python.vscode-python-envs
+ms-toolsai.jupyter
+ms-toolsai.jupyter-keymap
+ms-toolsai.jupyter-renderers
+ms-toolsai.vscode-jupyter-cell-tags
+ms-toolsai.vscode-jupyter-slideshow
+ms-vscode-remote.remote-containers
+ms-vscode-remote.remote-ssh
+ms-vscode-remote.remote-ssh-edit
+ms-vscode-remote.remote-wsl
+ms-vscode.remote-explorer
+ms-vsliveshare.vsliveshare
+natqe.reload
+oderwat.indent-rainbow
+pkief.material-icon-theme
+prisma.prisma
+redhat.java
+redhat.vscode-yaml
+robocorp.robocorp-code
 sdras.night-owl
+tomoki1207.pdf
+usernamehw.errorlens
+visualstudioexptteam.intellicode-api-usage-examples
+visualstudioexptteam.vscodeintellicode
+vscjava.migrate-java-to-azure
+vscjava.vscode-gradle
+vscjava.vscode-java-debug
+vscjava.vscode-java-dependency
+vscjava.vscode-java-pack
+vscjava.vscode-java-test
+vscjava.vscode-java-upgrade
+vscjava.vscode-maven
+wallabyjs.console-ninja

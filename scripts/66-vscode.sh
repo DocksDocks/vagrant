@@ -58,3 +58,28 @@ if [ ! -f /var/lib/vagrant-provisioned ]; then
 else
   echo ">> Já provisionado — preservando o settings.json do VS Code."
 fi
+
+# ── Secret storage: persist the GitHub Settings-Sync sign-in ──
+# LightDM autologin is passwordless, so gnome-keyring's "login" collection is
+# never unlocked and VS Code's sync token lands in the throwaway in-memory
+# keyring — lost on every reload, forcing a fresh GitHub sign-in each time.
+# Tell Electron to persist secrets in an app-level encrypted file instead
+# ("basic" store). Seeded only if argv.json doesn't exist yet — VS Code merges
+# its own crash-reporter-id in on first launch, so we never clobber a real one.
+# https://github.com/microsoft/vscode/issues/120392
+ARGV=/home/vagrant/.vscode/argv.json
+if [ ! -e "$ARGV" ]; then
+  echo ">> Configurando o password-store do VS Code (basic) para o login do GitHub persistir..."
+  install -d -o vagrant -g vagrant /home/vagrant/.vscode
+  cat > "$ARGV" <<'ARGVJSON'
+// VS Code runtime arguments — Command Palette → "Preferences: Configure Runtime Arguments".
+{
+	// Persist secrets (GitHub Settings-Sync token, etc.) in an app-level
+	// encrypted file instead of the OS keyring — the passwordless autologin
+	// session never unlocks gnome-keyring, so the keyring loses the token on
+	// every reload. "basic" is the headless/VM-friendly store.
+	"password-store": "basic"
+}
+ARGVJSON
+  chown vagrant:vagrant "$ARGV"
+fi

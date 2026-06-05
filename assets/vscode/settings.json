@@ -1,28 +1,137 @@
 // VS Code user settings for the Debian dev box.
 //
-// This is a sensible Night Owl default. To use YOUR settings, copy your host
-// file over it and re-provision (it is seeded on the first provision only, so
-// edits you make inside the VM are preserved):
-//   Linux:   ~/.config/Code/User/settings.json
-//   macOS:   ~/Library/Application Support/Code/User/settings.json
-//   Windows: %APPDATA%\Code\User\settings.json
-// → paste into assets/vscode/settings.json, commit, then `vagrant provision`.
+// Synced from the maintainer's VS Code (Settings Sync via GitHub) on 2026-06-05.
+// Seeded to ~/.config/Code/User/settings.json on the FIRST provision only, so
+// edits made inside the VM are preserved on re-provision. To refresh this
+// baseline, copy your host settings.json over it and `vagrant destroy && up`
+// (or edit in-VM). Host paths: ~/.config/Code/User/settings.json (Linux),
+// ~/Library/Application Support/Code/User/settings.json (macOS),
+// %APPDATA%\Code\User\settings.json (Windows).
 //
-// The Night Owl theme comes from the sdras.night-owl extension (assets/vscode/
-// extensions.txt). JetBrainsMono Nerd Font is installed by 65-superfile-fonts.sh.
+// Redacted vs the live file: the `remote.SSH.remotePlatform` entry (a machine-
+// specific remote host IP) was dropped — VS Code repopulates it on connect.
 {
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "javascript.suggest.autoImports": true,
+  "typescript.suggest.autoImports": true,
+  "[python]": {
+    "editor.formatOnType": true,
+    "editor.defaultFormatter": "ms-python.autopep8",
+  },
+  "explorer.confirmDelete": false,
+  "editor.inlineSuggest.enabled": true,
+  "explorer.confirmDragAndDrop": false,
   "workbench.colorTheme": "Night Owl",
-  "editor.fontFamily": "'JetBrainsMono Nerd Font', 'Droid Sans Mono', monospace",
   "editor.fontLigatures": true,
-  "editor.fontSize": 14,
-  "editor.tabSize": 2,
-  "editor.renderWhitespace": "boundary",
-  "editor.bracketPairColorization.enabled": true,
-  "editor.guides.bracketPairs": "active",
+  "editor.fontFamily": "JetBrains Mono",
+  "editor.codeActionsOnSave": [
+    "source.addMissingImports",
+    "source.fixAll.eslint",
+  ],
+  "keyboard.dispatch": "keyCode",
+  "workbench.iconTheme": "material-icon-theme",
+  "typescript.suggest.completeFunctionCalls": true,
+  "javascript.suggest.completeFunctionCalls": true,
+  "eslint.format.enable": true,
+  "eslint.lintTask.enable": true,
+  "javascript.preferences.importModuleSpecifierEnding": "minimal",
+  "typescript.preferences.importModuleSpecifierEnding": "minimal",
+  "files.exclude": {
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/.hg": true,
+    "**/.svn": true,
+    "**/.git": true,
+    // "node_modules": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+  },
+  "terminal.integrated.fontFamily": "monospace",
+  "editor.minimap.autohide": "mouseover",
+  "editor.minimap.maxColumn": 20,
+  "editor.minimap.scale": 2,
+  "files.associations": {
+    "*.css": "tailwindcss",
+    "*.php": "php",
+    "*.json": "jsonc",
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+  },
+  "editor.minimap.enabled": false,
+  "terminal.integrated.env.windows": {},
+  "terminal.integrated.env.linux": {},
+  "terminal.integrated.env.osx": {},
   "files.trimTrailingWhitespace": true,
-  "files.insertFinalNewline": true,
-  "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font'",
-  "telemetry.telemetryLevel": "off",
-  "update.mode": "none",
-  "extensions.autoCheckUpdates": false
+  "workbench.startupEditor": "none",
+  "git.ignoreMissingGitWarning": true,
+  "terminal.integrated.defaultProfile.windows": "Ubuntu (WSL)",
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell",
+    },
+    "Command Prompt": {
+      "path": [
+        "${env:windir}\\Sysnative\\cmd.exe",
+        "${env:windir}\\System32\\cmd.exe",
+      ],
+      "args": [],
+      "icon": "terminal-cmd",
+    },
+    "Git Bash": {
+      "source": "Git Bash",
+    },
+    "Ubuntu (WSL)": {
+      "path": "C:\\Windows\\System32\\wsl.exe",
+      "args": ["-d", "Ubuntu"],
+    },
+  },
+  "git.openRepositoryInParentFolders": "always",
+  "diffEditor.hideUnchangedRegions.enabled": true,
+  "php.problems.exclude": {
+    "**/*": ["PHP0415"],
+  },
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "chat.editing.confirmEditRequestRetry": false,
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+  },
+  "security.allowedUNCHosts": ["wsl.localhost"],
+  "editor.accessibilitySupport": "off",
+  "docker.extension.dockerEngineAvailabilityPrompt": false,
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features",
+  },
+  "workbench.secondarySideBar.showLabels": false,
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features",
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+  },
+  "notebook.lineNumbers": "on",
+  "terminal.integrated.enableMultiLinePasteWarning": "never",
+  "liveServer.settings.donotShowInfoMsg": true,
+  "claudeCode.preferredLocation": "panel",
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+  },
+  "explorer.confirmPasteNative": false,
+  "git.confirmSync": false,
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+  },
+  "json.schemas": [
+    {
+      "fileMatch": ["*.jsonc"],
+      "schema": {
+        "allowTrailingCommas": true,
+      },
+    },
+  ],
+  "chat.disableAIFeatures": true,
 }

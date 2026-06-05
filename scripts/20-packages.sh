@@ -21,6 +21,14 @@ apt-get install -y -qq \
   google-chrome-stable gh code \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
+# ── Dedup do repo do Chrome ─────────────────────────────
+# Installing google-chrome-stable drops a deb822 source
+# (/etc/apt/sources.list.d/google-chrome.sources) that duplicates the .list we
+# already maintain in 10-apt-repos.sh, so apt warns "Target Packages is
+# configured multiple times" on every update. Chrome won't recreate it once
+# removed, so dropping it here dedups the repo for good.
+rm -f /etc/apt/sources.list.d/google-chrome.sources
+
 # ── Composer ────────────────────────────────────────────
 # Verify the installer's SHA-384 against the canonical hash published at
 # composer.github.io/installer.sig before running it as root. Without this,
