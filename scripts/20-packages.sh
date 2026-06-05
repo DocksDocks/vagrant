@@ -17,7 +17,7 @@ apt-get install -y -qq \
   dbus-x11 xdg-utils xclip \
   pulseaudio alsa-utils \
   fonts-noto-color-emoji \
-  arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme \
+  arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme sassc \
   google-chrome-stable gh \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 

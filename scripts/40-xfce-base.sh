@@ -27,7 +27,7 @@ getent group autologin >/dev/null || groupadd autologin
 usermod -aG autologin vagrant
 systemctl set-default graphical.target
 
-# LightDM greeter com Arc-Dark + Papirus (tela de login)
+# LightDM greeter com Tokyo Night GTK + Papirus (tela de login)
 fetch_asset lightdm-gtk-greeter.conf /etc/lightdm/lightdm-gtk-greeter.conf
 
 # ── Painel XFCE (single bottom panel: whiskermenu + dock + systray + clock) ──

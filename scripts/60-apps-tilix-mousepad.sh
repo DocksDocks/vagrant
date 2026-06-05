@@ -41,11 +41,22 @@ export DEBIAN_FRONTEND=noninteractive
 KEYFILES_DIR=$(mktemp -d)
 trap 'rm -rf "$KEYFILES_DIR" /tmp/tilix.dconf' EXIT
 
-# ── Mousepad: Solarized Dark + Line Numbers ─────────────
+# ── Mousepad Night Owl GtkSourceView style scheme ───────
+# Deployed every provision (cheap, idempotent) so the scheme is always on disk;
+# the color-scheme gsetting that *selects* it is seeded first-provision-only
+# (in the keyfile below). Mousepad is GTK3, so it reads GtkSourceView 4 user
+# styles from ~/.local/share/gtksourceview-4/styles/. Owned by vagrant
+# explicitly: 55-permissions.sh already ran (it sweeps /home/vagrant *before*
+# this script), so files created here are not caught by its chown pass.
+STYLES_DIR=/home/vagrant/.local/share/gtksourceview-4/styles
+fetch_asset gtksourceview/night-owl.xml "$STYLES_DIR/night-owl.xml"
+chown -R vagrant:vagrant /home/vagrant/.local/share/gtksourceview-4
+
+# ── Mousepad: Night Owl + Line Numbers ─────────────
 cat >"$KEYFILES_DIR/00-mousepad" <<'EOF'
 [org/xfce/mousepad/preferences/view]
 show-line-numbers=true
-color-scheme='solarized-dark'
+color-scheme='night-owl'
 EOF
 
 # ── Tilix: configuração do terminal ──────────────────────

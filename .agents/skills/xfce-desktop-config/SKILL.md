@@ -1,6 +1,6 @@
 ---
 name: xfce-desktop-config
-description: Use when shaping the XFCE/LightDM/GTK guest experience without an active D-Bus session: writing xfconf channel XML for xfwm4.xml, xsettings.xml, xfce4-panel.xml, xfce4-power-manager.xml, xfce4-keyboard-shortcuts.xml, xfce4-notifyd.xml, using dconf compile (NOT dconf load — provisioning has no session bus) to build ~/.config/dconf/user from keyfiles for Tilix and Mousepad, rewriting tilix.dconf section headers from [/] to [com/gexperts/Tilix], configuring LightDM autologin with runtime detection of xfce.desktop vs xfce4.desktop, deploying lightdm-gtk-greeter.conf (Arc-Dark + Papirus-Dark + Noto Sans), shadowing light-locker.desktop with Hidden=true, working around the Papirus-Dark icon inheritance gap (inherits from breeze-dark,hicolor) by symlinking utilities-terminal.svg into the user-XDG hicolor overlay, holding Tilix profile UUID 2b7c4080-0ddd-46c5-8f23-563fd3ba789d, and symlinking /etc/profile.d/vte-2.91.sh to vte.sh for OSC 7 / prompt-markers. Not for VirtualBox VMSVGA gotchas, shell-script conventions, or installer trust verification.
+description: Use when shaping the XFCE/LightDM/GTK guest experience without an active D-Bus session: writing xfconf channel XML (xfwm4/xsettings/panel/power-manager/keyboard-shortcuts/notifyd); using dconf compile (NOT dconf load — no session bus during provisioning) to build ~/.config/dconf/user from Tilix/Mousepad keyfiles; rewriting tilix.dconf [/] headers to [com/gexperts/Tilix]; LightDM autologin with xfce.desktop-vs-xfce4.desktop detection; the Night Owl look — Tilix palette + a hand-authored GtkSourceView 4 Mousepad scheme + the Tokyo Night GTK chrome from a pinned commit + SASS compile (no literal Night Owl GTK theme exists; the theme name must match across xsettings.xml/xfwm4.xml/the greeter); shadowing light-locker.desktop; the Papirus-Dark hicolor overlay (utilities-terminal.svg); Tilix profile UUID 2b7c4080-0ddd-46c5-8f23-563fd3ba789d; the /etc/profile.d/vte.sh symlink for VTE OSC 7. Not for VMSVGA gotchas, shell-script conventions, or installer trust verification.
 user-invocable: false
 metadata:
   pattern: tool-wrapper
@@ -14,10 +14,11 @@ metadata:
     - "assets/xfce4-panel.xml"
     - "assets/xfce4-power-manager.xml"
     - "assets/tilix.dconf"
+    - "assets/gtksourceview/night-owl.xml"
     - "assets/lightdm-gtk-greeter.conf"
     - "assets/xfce4-keyboard-shortcuts.xml"
     - "assets/xfce4-notifyd.xml"
-  updated: "2026-06-03"
+  updated: "2026-06-05"
 ---
 
 # XFCE Desktop Config
@@ -85,6 +86,59 @@ fetch_asset xsettings.xml /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml
 
 Source: `scripts/40-xfce-base.sh:35-49`, `scripts/41-xfce-theme.sh:18-19`. xfconfd reads channel XML files from both paths; user config wins at runtime. Both paths must use the exact xfconf channel XML format (not gsettings schema format).
 
+### GTK + xfwm4 theme: one name, three files
+
+The active GTK/xfwm4 theme name is referenced in **three** files that must
+agree, or the desktop renders half-themed:
+
+- `assets/xsettings.xml` → `Net/ThemeName` (GTK app widgets)
+- `assets/xfwm4.xml` → `general/theme` (window-manager titlebars + borders)
+- `assets/lightdm-gtk-greeter.conf` → `theme-name` (the login screen)
+
+All three are `Tokyonight-Dark`. Changing the desktop theme means updating all
+three **plus** the install in `scripts/41`. Icons (`IconThemeName` /
+`icon-theme-name`) are a separate axis — still `Papirus-Dark`.
+
+### Vendored GTK theme install (pinned commit + SASS compile)
+
+No literal Night Owl GTK theme exists upstream, so the chrome uses Tokyo Night —
+the closest maintained navy GTK3/4 + xfwm4 theme. Installed like the Colloid
+icon pin: fetch ONE immutable commit, assert `HEAD == SHA`, then run the
+upstream installer (which compiles from SASS — `sassc` is a `scripts/20` dep).
+
+```bash
+TOKYONIGHT_PIN=6c340e058e84c1975a038a8e5d1e384477225dc0
+git init --quiet "$tmp"
+git -C "$tmp" remote add origin https://github.com/Fausto-Korpsvart/Tokyonight-GTK-Theme
+git -C "$tmp" fetch --depth 1 --quiet origin "$TOKYONIGHT_PIN"
+git -C "$tmp" checkout --quiet FETCH_HEAD
+[ "$(git -C "$tmp" rev-parse HEAD)" = "$TOKYONIGHT_PIN" ] || exit 1
+# --theme default --color dark --size standard → /usr/share/themes/Tokyonight-Dark
+"$tmp/themes/install.sh" --dest /usr/share/themes --theme default --color dark --size standard >/dev/null
+```
+
+Source: `scripts/41-xfce-theme.sh`. Idempotent (skips if
+`/usr/share/themes/Tokyonight-Dark` exists; `FORCE_REINSTALL=1` redoes).
+`arc-theme` stays apt-installed as the one-line revert path.
+
+### Mousepad Night Owl GtkSourceView scheme
+
+Mousepad is GTK3 → reads GtkSourceView **4** style schemes. The hand-authored
+`assets/gtksourceview/night-owl.xml` (`id="night-owl"`) is deployed EVERY
+provision to the user styles dir; the `color-scheme` gsetting that selects it is
+seeded first-provision-only (in the dconf keyfile). The scheme `id` MUST equal
+the gsetting value, or Mousepad silently falls back to a default scheme.
+
+```bash
+fetch_asset gtksourceview/night-owl.xml \
+  /home/vagrant/.local/share/gtksourceview-4/styles/night-owl.xml
+chown -R vagrant:vagrant /home/vagrant/.local/share/gtksourceview-4
+```
+
+Source: `scripts/60-apps-tilix-mousepad.sh`. Deployed + chowned explicitly
+because `55-permissions.sh` runs BEFORE `60` — its `/home/vagrant` chown sweep
+does not catch files that `60` creates.
+
 ### dconf compile — the correct provisioning path
 
 ```bash
@@ -95,7 +149,7 @@ trap 'rm -rf "$KEYFILES_DIR" /tmp/tilix.dconf' EXIT
 cat >"$KEYFILES_DIR/00-mousepad" <<'EOF'
 [org/xfce/mousepad/preferences/view]
 show-line-numbers=true
-color-scheme='solarized-dark'
+color-scheme='night-owl'
 EOF
 
 # Tilix: fetch dconf file and rewrite section headers for keyfile syntax
@@ -197,6 +251,8 @@ Source: `scripts/60-apps-tilix-mousepad.sh:71-83`. Debian ships `/etc/profile.d/
 - **Fixed Tilix profile UUID**: random UUIDs on first launch would not match `default-profile` and `profile-list` in the pre-compiled database. Source: `assets/tilix.dconf:4`.
 - **xfconf XML to two paths**: `/etc/xdg/` sets system defaults; `~/.config/xfce4/` sets per-user overrides. Both are needed — system defaults apply to new users; per-user overrides win at runtime. Source: `scripts/40-xfce-base.sh:35-49`.
 - **User-level hicolor overlay**: symlinking into `~/.local/share/icons/hicolor/` is safe for `apt upgrade papirus-icon-theme` and `papirus-icon-theme` removal. Source: `scripts/41-xfce-theme.sh:33`.
+- **No literal Night Owl GTK theme → Tokyo Night**: Night Owl is a code-editor theme with no GTK/xfwm4 port upstream. The terminal (`tilix.dconf`) and editor (`gtksourceview/night-owl.xml`) are *literal* Night Owl; the GTK chrome is Tokyo Night, the closest maintained navy theme. Source: `plans/0007-night-owl-desktop.md`.
+- **Keep Papirus-Dark, not Colloid**: the Nerd Font covers terminal/superfile glyphs (a font cannot serve as a GUI icon theme), icon themes aren't Night-Owl-specific, and Papirus already has the Tilix overlay integration. Source: `plans/0007-night-owl-desktop.md`.
 
 ## Gotchas
 
@@ -209,6 +265,10 @@ Source: `scripts/60-apps-tilix-mousepad.sh:71-83`. Debian ships `/etc/profile.d/
 **Papirus-Dark warning persists after provisioning if `gtk-update-icon-cache` fails**: the cache is optional (`|| true`), but without it the icon resolver must scan directories on each lookup — the warning still appears. The `index.theme` copy at line 44 is required for `gtk-update-icon-cache` to write a valid cache file.
 
 **Tilix "Configuration Issue Detected"** after provisioning: the VTE symlink (`/etc/profile.d/vte.sh`) must exist AND the `~/.bashrc` append must have run. Check `scripts/60-apps-tilix-mousepad.sh:71-83`. The dialog appears because Tilix detects it's running under VTE but the VTE shell hooks aren't sourced.
+
+**Half-themed desktop (app widgets navy, but titlebars or the login screen stay gray)**: the theme name disagrees across the three files that reference it. `assets/xsettings.xml` (`ThemeName`), `assets/xfwm4.xml` (`theme`), and `assets/lightdm-gtk-greeter.conf` (`theme-name`) must all read `Tokyonight-Dark`, and `/usr/share/themes/Tokyonight-Dark` must exist (installed by `scripts/41`).
+
+**Mousepad opens with a default scheme, not Night Owl**: either the scheme `id` in `night-owl.xml` ≠ the `color-scheme` gsetting value (`night-owl`), or the file landed in the wrong dir — Mousepad is GTK3 and reads GtkSourceView **4** styles (`~/.local/share/gtksourceview-4/styles/`), not 5. Source: `scripts/60-apps-tilix-mousepad.sh`, `assets/gtksourceview/night-owl.xml`.
 
 ## References
 

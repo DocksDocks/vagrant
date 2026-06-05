@@ -11,7 +11,7 @@ This repository provisions a complete Debian 13 (Trixie, stable) development VM 
 - **Base box:** `bento/debian-13` (Debian 13 Trixie, stable). We use Bento's image rather than the Debian Cloud Team's `debian/trixie64` because the latter is published with the **libvirt provider only** as of 2026 ([Debian bug #1110834](https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1110834) — original maintainer stepped down after Vagrant's license change, new maintainer publishes libvirt-only). We also avoid `debian/testing64` because `testing` now tracks Forky (Debian 14 dev), where packages like Tilix get auto-removed when transitive deps break. Bento ships VirtualBox/VMware/Parallels by default and is actively maintained (Debian 13.3 as of Nov 2025).
 - **Hypervisor:** VirtualBox with VMSVGA graphics controller (the correct one for Linux guests; VBoxSVGA is for Windows)
 - **Desktop:** XFCE 4 with LightDM (autologin as `vagrant`, password: `vagrant`, set on first provision only)
-- **Theme:** Arc-Dark + Papirus-Dark icons + Noto Sans font + DMZ-White cursor
+- **Theme:** Night Owl aesthetic — Tokyo Night GTK chrome (navy, closest maintained match; no literal Night Owl GTK theme exists) + Night Owl Tilix palette + Night Owl Mousepad scheme; Papirus-Dark icons + Noto Sans font + DMZ-White cursor. See `plans/0007-night-owl-desktop.md`.
 - **Graphics:** VirtualBox Guest Additions built from ISO. VMSVGA uses the mainline `vmwgfx` kernel driver (no blacklisting needed). GA provides clipboard, shared folders, and auto-resize.
 - **Compositor:** xfwm4 compositor is **enabled** (`use_compositing=true`) so windows get rounded corners and shadows. `vblank_mode=off` is kept because xfwm4 marks `llvmpipe`/`SVGA3D`/`virgl` as unsupported GL renderers for vblank (xfwm4 `src/compositor.c`), and VMSVGA exposes exactly those — leaving vblank at the default `auto`/`glx` would trigger "Unsupported GL renderer" warnings and unstable paths. Compositing itself is fine under VMSVGA software rendering; only VirtualBox 3D acceleration regresses it.
 - **Shell provisioning:** Uses `set -euo pipefail`, so any unhandled error aborts the entire provisioning. Commands that may fail should use `|| true`.
@@ -28,11 +28,11 @@ The `Vagrantfile` (~300 lines) handles host-side resource detection and the Virt
    - `20-packages.sh` — batch `apt install`, Composer (with SHA-384 verification), docker group, vagrant password.
    - `30-guest-additions.sh` — VBox Guest Additions from ISO (idempotent: skips if VBoxClient is present).
    - `40-xfce-base.sh` — LightDM autologin, panel/dock layout, Chrome as default browser, Chrome no-GPU policy.
-   - `41-xfce-theme.sh` — Arc-Dark + Papirus + Noto Sans + Tilix CloseDialog icon overlay.
+   - `41-xfce-theme.sh` — Tokyo Night GTK theme (pinned commit, SASS-compiled via the upstream installer) + Papirus + Noto Sans + Tilix CloseDialog icon overlay.
    - `45-desktop-extras.sh` — Ubuntu-style PrtSc (deploys the `screenshot-region` wrapper → `/usr/local/bin`, chmod 0755, and seeds `xfce4-keyboard-shortcuts.xml` to `/etc/xdg` binding `Print` to it: region-select → save to `~/Pictures/Screenshots` + copy to clipboard, no dialogs) and pins Downloads + Pictures in the Thunar sidebar (idempotent GTK bookmarks). Also seeds `xfce4-notifyd.xml` to `/etc/xdg` (`expire-timeout=2` so notification toasts fade after ~2s instead of lingering). Seed-only for the xfconf channels, so it never clobbers a user's customised `~/.config` copy.
    - `50-vboxclient-supervisor.sh` — supervised systemd --user units for clipboard/drag-n-drop + 2-min healthcheck timer (recovers the silently-dead HGCM↔X11 bridge without needing a screen-unlock signal).
    - `51-vbox-autoresize.sh` — xev-based auto-resize workaround for VBox GA #568.
-   - `60-apps-tilix-mousepad.sh` — dconf-compile of Tilix + Mousepad settings, VTE shell-integration in `~/.bashrc`.
+   - `60-apps-tilix-mousepad.sh` — dconf-compile of Tilix (Night Owl palette) + Mousepad (Night Owl GtkSourceView 4 scheme, deployed to `~/.local/share/gtksourceview-4/styles/`) settings, VTE shell-integration in `~/.bashrc`.
    - `65-superfile-fonts.sh` — JetBrainsMono Nerd Font + superfile (idempotent).
    - `70-nodejs-claude.sh` — nvm + Node LTS + pnpm + Claude Code + Codex CLI (idempotent). Hoists nvm's source block above the bashrc interactivity guard so `bash -lc`/IDE-spawned tooling can resolve node.
    - `80-git-ssh.sh` — `git-pull-all` (deployed via `fetch_asset bin/git-pull-all` → `/usr/local/bin`, chmod 0755), SSH key, bashrc aliases, default git config (only if not already set).
@@ -52,7 +52,7 @@ The `Vagrantfile` (~300 lines) handles host-side resource detection and the Virt
 
 **CLI:** Git, GitHub CLI (gh), Python 3 + pip + venv, PHP 8.4 CLI + extensions (curl, mbstring, xml, zip, bcmath, intl), Composer (SHA-384 verified at install), Docker + Compose v2 plugin + Buildx + containerd.io, Node.js LTS (nvm), npm, pnpm, Claude Code, Codex CLI, ShellCheck, jq, yq, ripgrep, build-essential, fzf, bat (alias `bat`→`batcat`), fd-find (alias `fd`→`fdfind`), htop, btop, tree, direnv, `git-pull-all` (parallel bulk fetch + ff-only pull across a directory tree, `-j N` jobs; also runs as `git pull-all`), superfile (`spf`), wget, zip, unzip, rsync, xclip.
 
-**Desktop:** XFCE 4 (panel, whiskermenu, docklike, taskmanager, notifyd, screenshooter), Tilix (split-pane terminal — default), Mousepad (text editor), LightDM + lightdm-gtk-greeter, Google Chrome, dbus-x11, xdg-utils, pulseaudio + alsa-utils, JetBrainsMono Nerd Font, fonts-noto + noto-color-emoji, Arc-Dark theme, Papirus + Papirus-Dark icons, DMZ-Cursor.
+**Desktop:** XFCE 4 (panel, whiskermenu, docklike, taskmanager, notifyd, screenshooter), Tilix (split-pane terminal — default), Mousepad (text editor), LightDM + lightdm-gtk-greeter, Google Chrome, dbus-x11, xdg-utils, pulseaudio + alsa-utils, JetBrainsMono Nerd Font, fonts-noto + noto-color-emoji, Tokyo Night GTK theme (`Tokyonight-Dark`, vendored from a pinned commit + SASS-compiled with `sassc`; `arc-theme` kept installed as the revert path), Papirus + Papirus-Dark icons, DMZ-Cursor.
 
 **Not installed by default** (install on demand): `wine`, `imagemagick`, `xfce4-terminal`. Dropped from the default set because nothing in the repo invokes them and they add noticeable provision time.
 

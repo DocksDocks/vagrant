@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 41-xfce-theme.sh — XFCE theme (Arc-Dark + Papirus + Noto Sans) + GTK3 headerbar CSS.
+# 41-xfce-theme.sh — XFCE theme (Tokyo Night GTK + Papirus + Noto Sans) + GTK3 headerbar CSS.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
@@ -9,11 +9,45 @@ export DEBIAN_FRONTEND=noninteractive
 # shellcheck source=_lib.sh
 . "${VAGRANT_LIB_PATH:-/vagrant/scripts/_lib.sh}"
 
-# ── GTK3 headerbar button fix (Arc-Dark CSD styling) ──
+FORCE="${FORCE_REINSTALL:-0}"
+
+# ── Tokyo Night GTK theme (system-wide, pinned + commit-verified) ──
+# No literal "Night Owl" GTK theme exists upstream (Night Owl is a code-editor
+# theme — nobody ported it to window chrome). Tokyo Night is the closest
+# maintained navy GTK3/4 + xfwm4 theme in the same deep-navy / blue-purple
+# family, so it pairs with the Night Owl terminal (assets/tilix.dconf) and
+# editor (assets/gtksourceview/night-owl.xml). See plans/0007-night-owl-desktop.md.
+#
+# Built from SASS by the upstream installer (needs `sassc`, installed in
+# 20-packages.sh). We fetch exactly one immutable commit and assert HEAD
+# matches it before compiling — same integrity contract as the Colloid pin in
+# 72-kate-editor.sh. arc-theme stays installed as the documented revert path.
+TOKYONIGHT_PIN=6c340e058e84c1975a038a8e5d1e384477225dc0
+if [[ "$FORCE" == "1" ]] || [ ! -d /usr/share/themes/Tokyonight-Dark ]; then
+  echo ">> Instalando tema GTK Tokyo Night (pin ${TOKYONIGHT_PIN:0:12})..."
+  tmp=$(mktemp -d)
+  git init --quiet "$tmp"
+  git -C "$tmp" remote add origin https://github.com/Fausto-Korpsvart/Tokyonight-GTK-Theme
+  git -C "$tmp" fetch --depth 1 --quiet origin "$TOKYONIGHT_PIN"
+  git -C "$tmp" checkout --quiet FETCH_HEAD
+  got="$(git -C "$tmp" rev-parse HEAD)"
+  if [ "$got" != "$TOKYONIGHT_PIN" ]; then
+    echo "✗ Tokyo Night commit mismatch — expected $TOKYONIGHT_PIN, got $got. Refusing." >&2
+    rm -rf "$tmp"; exit 1
+  fi
+  # Build only the standard dark blue variant → /usr/share/themes/Tokyonight-Dark
+  # (gtk-3.0 for XFCE apps + xfwm4 for the window borders set in xfwm4.xml).
+  "$tmp/themes/install.sh" --dest /usr/share/themes --theme default --color dark --size standard >/dev/null
+  rm -rf "$tmp"
+else
+  echo ">> Tema GTK Tokyo Night já instalado — pulando (FORCE_REINSTALL=1 para refazer)."
+fi
+
+# ── GTK3 headerbar button fix (theme-agnostic CSD button styling) ──
 mkdir -p /home/vagrant/.config/gtk-3.0
 fetch_asset gtk.css /home/vagrant/.config/gtk-3.0/gtk.css
 
-# ── Tema visual (Arc-Dark + Papirus + Noto Sans) ────────
+# ── Tema visual (Tokyo Night GTK + Papirus + Noto Sans) ────────
 mkdir -p /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml
 
 fetch_asset xsettings.xml       /home/vagrant/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
