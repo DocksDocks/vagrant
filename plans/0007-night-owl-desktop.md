@@ -36,7 +36,9 @@ and the Mousepad `color-scheme` (`scripts/60`).
    (from `mbadolato/iTerm2-Color-Schemes`). Profile UUID, font, and 4%
    transparency unchanged. Compiled into the dconf user-db by `scripts/60`
    exactly as before (`dconf compile`, first-provision-only).
-2. **Mousepad → Night Owl** (hand-authored, no upstream port exists). A new
+2. **Mousepad → Night Owl** — **⚠ Superseded by [0008](0008-vscode-editor.md):
+   Mousepad was removed in favour of VS Code and this scheme deleted.**
+   (hand-authored, no upstream port exists). A new
    GtkSourceView 4 style scheme `assets/gtksourceview/night-owl.xml` (`id`
    `night-owl`), authored from the Night Owl palette using the upstream
    `solarized-dark.xml` structure. Deployed **every** provision to

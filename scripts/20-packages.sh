@@ -12,13 +12,13 @@ apt-get install -y -qq \
   php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \
   xfce4 \
   xfce4-notifyd xfce4-screenshooter \
-  xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-pulseaudio-plugin xfce4-taskmanager mousepad \
+  xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-pulseaudio-plugin xfce4-taskmanager \
   lightdm lightdm-gtk-greeter \
   dbus-x11 xdg-utils xclip \
   pulseaudio alsa-utils \
   fonts-noto-color-emoji \
   arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme sassc \
-  google-chrome-stable gh \
+  google-chrome-stable gh code \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # ── Composer ────────────────────────────────────────────

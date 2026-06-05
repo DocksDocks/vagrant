@@ -288,8 +288,9 @@ SCRIPTS = %w[
   50-vboxclient-supervisor
   51-vbox-autoresize
   55-permissions
-  60-apps-tilix-mousepad
+  60-tilix
   65-superfile-fonts
+  66-vscode
   70-nodejs-claude
   80-git-ssh
   85-secrets-env

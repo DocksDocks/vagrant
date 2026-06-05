@@ -61,7 +61,7 @@ NoDisplay=true
 X-GNOME-Autostart-enabled=false
 LL
 
-# ── Docklike: apps fixos (Chrome, Thunar, Terminal, Mousepad) ──
+# ── Docklike: apps fixos (Chrome, Thunar, Terminal, VS Code) ──
 fetch_asset docklike.rc /etc/xdg/xfce4/panel/docklike.rc
 # Copia com ID do plugin para cobertura completa
 cp /etc/xdg/xfce4/panel/docklike.rc /etc/xdg/xfce4/panel/docklike-10.rc

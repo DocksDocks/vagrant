@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 60-apps-tilix-mousepad.sh — Mousepad (gsettings) + Tilix (dconf load).
+# 60-tilix.sh — Tilix terminal settings (Night Owl palette) via dconf compile.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
@@ -14,17 +14,16 @@ export DEBIAN_FRONTEND=noninteractive
 #
 # `dconf load` and `gsettings set` both go through dconf-service over the
 # session bus. During provisioning vagrant has no real login session, so we
-# spawn a one-shot bus with `dbus-run-session`. That worked for the first two
-# calls (Mousepad gsettings) but the third (Tilix `dconf load`) consistently
-# failed with `Failed to bind socket "/tmp/dbus-…": Permission denied` — the
-# dbus-daemon under bento/debian-13's `tmp.mount` couldn't bind there, and
-# despite multiple workarounds (loginctl enable-linger, env -u, runuser -l,
-# pre-creating /run/user/$UID) the third call kept falling back to /tmp.
+# spawn a one-shot bus with `dbus-run-session`, but `dconf load` for Tilix
+# consistently failed with `Failed to bind socket "/tmp/dbus-…": Permission
+# denied` — the dbus-daemon under bento/debian-13's `tmp.mount` couldn't bind
+# there, and despite multiple workarounds (loginctl enable-linger, env -u,
+# runuser -l, pre-creating /run/user/$UID) it kept falling back to /tmp.
 #
 # `dconf compile OUTPUT KEYFILEDIR` writes a binary GVDB straight to disk with
 # no bus involved — that's how system-wide /etc/dconf/db/* are built. The
-# user db is the same format at ~/.config/dconf/user. We collect both Mousepad
-# and Tilix settings as keyfiles in a temp dir and compile them in one shot.
+# user db is the same format at ~/.config/dconf/user. We compile Tilix's
+# settings into that db from a keyfile.
 #
 # Caveat: dconf compile *replaces* the output db (a full GVDB rebuild, not a
 # merge), so it would wipe any desktop prefs you've changed since first boot
@@ -40,24 +39,6 @@ export DEBIAN_FRONTEND=noninteractive
 
 KEYFILES_DIR=$(mktemp -d)
 trap 'rm -rf "$KEYFILES_DIR" /tmp/tilix.dconf' EXIT
-
-# ── Mousepad Night Owl GtkSourceView style scheme ───────
-# Deployed every provision (cheap, idempotent) so the scheme is always on disk;
-# the color-scheme gsetting that *selects* it is seeded first-provision-only
-# (in the keyfile below). Mousepad is GTK3, so it reads GtkSourceView 4 user
-# styles from ~/.local/share/gtksourceview-4/styles/. Owned by vagrant
-# explicitly: 55-permissions.sh already ran (it sweeps /home/vagrant *before*
-# this script), so files created here are not caught by its chown pass.
-STYLES_DIR=/home/vagrant/.local/share/gtksourceview-4/styles
-fetch_asset gtksourceview/night-owl.xml "$STYLES_DIR/night-owl.xml"
-chown -R vagrant:vagrant /home/vagrant/.local/share/gtksourceview-4
-
-# ── Mousepad: Night Owl + Line Numbers ─────────────
-cat >"$KEYFILES_DIR/00-mousepad" <<'EOF'
-[org/xfce/mousepad/preferences/view]
-show-line-numbers=true
-color-scheme='night-owl'
-EOF
 
 # ── Tilix: configuração do terminal ──────────────────────
 # Tilix identifies profiles by UUID — we set a fixed UUID as the default profile.
@@ -78,7 +59,7 @@ if [ ! -f /var/lib/vagrant-provisioned ]; then
   # broken. Fail loud so a regression is visible in the provision log.
   runuser -u vagrant -- dconf compile /home/vagrant/.config/dconf/user "$KEYFILES_DIR"
 else
-  echo ">> Already provisioned — skipping Tilix/Mousepad dconf seed to preserve your settings."
+  echo ">> Already provisioned — skipping Tilix dconf seed to preserve your settings."
 fi
 
 # ── VTE shell integration (silences "Configuration Issue Detected" dialog) ──

@@ -70,5 +70,13 @@ curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli.gpg] https://cli.github.com/packages stable main" \
   > /etc/apt/sources.list.d/github-cli.list
 
+# Visual Studio Code (Microsoft) — `code` package installed in 20-packages.sh,
+# configured in 66-vscode.sh.
+curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | \
+  gpg --batch --yes --dearmor -o /etc/apt/keyrings/microsoft.gpg
+chmod a+r /etc/apt/keyrings/microsoft.gpg
+echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" \
+  > /etc/apt/sources.list.d/vscode.list
+
 # ── Único update com todos os repos prontos ─────────────
 apt-get update -qq

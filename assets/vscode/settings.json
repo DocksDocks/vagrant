@@ -1,0 +1,28 @@
+// VS Code user settings for the Debian dev box.
+//
+// This is a sensible Night Owl default. To use YOUR settings, copy your host
+// file over it and re-provision (it is seeded on the first provision only, so
+// edits you make inside the VM are preserved):
+//   Linux:   ~/.config/Code/User/settings.json
+//   macOS:   ~/Library/Application Support/Code/User/settings.json
+//   Windows: %APPDATA%\Code\User\settings.json
+// → paste into assets/vscode/settings.json, commit, then `vagrant provision`.
+//
+// The Night Owl theme comes from the sdras.night-owl extension (assets/vscode/
+// extensions.txt). JetBrainsMono Nerd Font is installed by 65-superfile-fonts.sh.
+{
+  "workbench.colorTheme": "Night Owl",
+  "editor.fontFamily": "'JetBrainsMono Nerd Font', 'Droid Sans Mono', monospace",
+  "editor.fontLigatures": true,
+  "editor.fontSize": 14,
+  "editor.tabSize": 2,
+  "editor.renderWhitespace": "boundary",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font'",
+  "telemetry.telemetryLevel": "off",
+  "update.mode": "none",
+  "extensions.autoCheckUpdates": false
+}

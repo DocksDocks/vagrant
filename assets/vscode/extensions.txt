@@ -1,0 +1,10 @@
+# VS Code extensions installed at provision time by 66-vscode.sh.
+# One extension ID per line. Blank lines and #-comments are ignored.
+# Each is installed with: code --install-extension <id>
+#
+# To mirror YOUR host setup, run on your host:
+#   code --list-extensions
+# then paste the IDs below, commit, and re-provision.
+
+# Night Owl theme (so "workbench.colorTheme": "Night Owl" in settings.json renders)
+sdras.night-owl
