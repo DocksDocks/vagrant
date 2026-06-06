@@ -84,5 +84,24 @@ chmod a+r /etc/apt/keyrings/microsoft.gpg
 echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" \
   > /etc/apt/sources.list.d/vscode.list
 
+# ── PHP 8.4 via Sury (deb.sury.org) onde o Debian não o traz nativo ──
+# O Debian 13 (Trixie, base do box amd64) já empacota PHP 8.4. O Debian 12
+# (Bookworm, base do box arm64/UTM) só traz 8.2, e PHP 8.4 é requisito do
+# projeto — então adicionamos o repo do Ondřej Surý, que publica 8.4 para
+# Bookworm em amd64 E arm64, incluindo as extensões que usamos (cli, curl,
+# mbstring, xml, zip, bcmath, intl). Os pacotes php8.4-* são instalados em
+# 20-packages.sh. Só adicionamos o repo quando o codename não é trixie+ (i.e.,
+# bookworm/bullseye), onde o 8.4 nativo não existe.
+CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
+case "$CODENAME" in
+  bullseye|bookworm)
+    curl -fsSL https://packages.sury.org/php/apt.gpg \
+      -o /etc/apt/keyrings/sury-php.gpg
+    chmod a+r /etc/apt/keyrings/sury-php.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/sury-php.gpg] https://packages.sury.org/php/ ${CODENAME} main" \
+      > /etc/apt/sources.list.d/sury-php.list
+    ;;
+esac
+
 # ── Único update com todos os repos prontos ─────────────
 apt-get update -qq

@@ -25,9 +25,10 @@ WINDOWS = !(HOST_OS =~ /mswin|mingw|cygwin/i).nil?
 #     XFCE que provisionamos. UTM dá uma janela gráfica nativa via QEMU/HVF.
 #   • Não há box Debian 13 (Trixie) ARM64 publicada para um provider livre (a
 #     única Trixie aarch64 mantida é VMware-only). A box UTM pronta é Debian 12
-#     (utm/bookworm). Bookworm difere pouco para nossos scripts: nomes de pacote
-#     genéricos (php-cli, etc.) e o fallback de codename do Docker em
-#     10-apt-repos.sh já cobrem a diferença.
+#     (utm/bookworm). A única diferença que importa para nós é o PHP: Bookworm
+#     traz 8.2, e o projeto exige 8.4 — resolvido pelo repo Sury (deb.sury.org)
+#     em 10/20-*.sh, que publica php8.4-* para Bookworm também em arm64. O
+#     fallback de codename do Docker em 10-apt-repos.sh cobre o resto.
 # Sobrescreva o nome da box via VAGRANT_ARM_BOX (ex.: uma imagem Trixie própria).
 # Requer no host: `vagrant plugin install vagrant_utm` + UTM instalado.
 is_mac_arm = RUBY_PLATFORM.include?("darwin") && RbConfig::CONFIG["host_cpu"].include?("arm64")

@@ -9,7 +9,6 @@ apt-get install -y -qq \
   git jq yq ripgrep build-essential tilix libharfbuzz-gobject0 wget zip unzip shellcheck rsync dconf-cli \
   fd-find fzf bat htop btop tree direnv \
   python3 python3-pip python3-venv \
-  php-cli php-common php-curl php-mbstring php-xml php-zip php-bcmath php-intl \
   xfce4 \
   xfce4-notifyd xfce4-screenshooter \
   xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-pulseaudio-plugin xfce4-taskmanager \
@@ -20,6 +19,16 @@ apt-get install -y -qq \
   arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme sassc \
   gh code \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# ── PHP 8.4 (versão fixada em ambas as arquiteturas) ────
+# PHP 8.4 é requisito do projeto. Em vez dos metapacotes php-* (que seguem o
+# default do Debian: 8.4 no Trixie/amd64, mas 8.2 no Bookworm/arm64), instalamos
+# os pacotes versionados php8.4-*. São nativos no Trixie e vêm do repo Sury no
+# Bookworm (configurado em 10-apt-repos.sh) — garantindo 8.4 também no box
+# arm64/UTM, e fixando 8.4 no amd64 mesmo se o default do Debian subir depois.
+# Instalado antes do Composer, que precisa do php CLI.
+apt-get install -y -qq \
+  php8.4-cli php8.4-common php8.4-curl php8.4-mbstring php8.4-xml php8.4-zip php8.4-bcmath php8.4-intl
 
 # ── Navegador + integração do hypervisor (dependente da arquitetura) ──
 # O Google Chrome só publica build Linux para amd64 — instalá-lo em arm64
