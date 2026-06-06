@@ -14,12 +14,22 @@ WINDOWS = !(HOST_OS =~ /mswin|mingw|cygwin/i).nil?
 
 # ── Arquitetura do host: macOS Apple Silicon (ARM64) ────
 # O VirtualBox não roda em Apple Silicon (sem build aarch64 estável). Quando o
-# host é um Mac ARM trocamos a base box para uma imagem ARM64, ativamos um
-# provider QEMU/VMware Fusion no lugar do VirtualBox e pulamos os scripts de
-# otimização específicos do VBox (Guest Additions, supervisor de clipboard,
-# auto-resize), que falhariam sem o VirtualBox. Em qualquer outro host (Windows
-# x86_64, Linux x86_64, Intel Mac) o caminho VirtualBox permanece intacto.
+# host é um Mac ARM trocamos a base box para uma imagem Debian 13 ARM64 e
+# usamos o provider VMware Fusion (vmware_desktop) no lugar do VirtualBox, e
+# pulamos os scripts de otimização específicos do VBox (Guest Additions,
+# supervisor de clipboard, auto-resize), que falhariam sem o VirtualBox. Em
+# qualquer outro host (Windows x86_64, Linux x86_64, Intel Mac) o caminho
+# VirtualBox permanece intacto.
+#
+# Por que VMware e não QEMU: não existe box Debian 13 (Trixie) ARM64 mantida
+# para o provider QEMU no Vagrant Cloud — a única imagem Trixie aarch64
+# publicada e mantida (defanator/debian-13) é VMware-only. Trocar para Debian
+# 12 (perk/debian-12-arm64) quebraria nossas premissas de Trixie (PHP 8.4,
+# conjunto de pacotes, constraint da base box em CLAUDE.md), então mantemos
+# Debian 13 + VMware. O nome da box é sobrescrevível via VAGRANT_ARM_BOX para
+# quem preferir uma imagem própria/construída localmente.
 is_mac_arm = RUBY_PLATFORM.include?("darwin") && RbConfig::CONFIG["host_cpu"].include?("arm64")
+ARM_BOX = ENV.fetch("VAGRANT_ARM_BOX", "defanator/debian-13")
 
 def detect_host_memory_mb
   if HOST_OS =~ /darwin/i
@@ -319,10 +329,11 @@ VBOX_ONLY_SCRIPTS = %w[
 Vagrant.configure("2") do |config|
   # ── Base box (dependente da arquitetura) ──────────────
   # x86_64 (Windows/Linux/Intel Mac): bento/debian-13 (Trixie) sobre VirtualBox
-  # — ver constraint da base box em CLAUDE.md. Mac ARM: imagem Debian ARM64,
-  # pois o bento/debian-13 não tem build aarch64 e o VirtualBox não roda em
-  # Apple Silicon.
-  config.vm.box = is_mac_arm ? "perk/debian-12-arm64" : "bento/debian-13"
+  # — ver constraint da base box em CLAUDE.md. Mac ARM: Debian 13 (Trixie)
+  # aarch64 via VMware (ARM_BOX, padrão defanator/debian-13), pois o
+  # bento/debian-13 não tem build aarch64 e o VirtualBox não roda em Apple
+  # Silicon. Mantém Debian 13 em ambas as arquiteturas (sem regredir p/ Bookworm).
+  config.vm.box = is_mac_arm ? ARM_BOX : "bento/debian-13"
   config.vm.hostname = "dev-box"
 
   # ── Rede ──────────────────────────────────────────────
@@ -331,24 +342,14 @@ Vagrant.configure("2") do |config|
 
   # ── Recursos da VM (alocação dinâmica) ───────────────
   if is_mac_arm
-    # Apple Silicon: QEMU (plugin vagrant-qemu) acelerado por HVF é o caminho
-    # padrão; o bloco vmware_desktop (plugin vagrant-vmware-desktop) fica como
-    # alternativa para quem tem o VMware Fusion. Sem VirtualBox aqui: não há
-    # build aarch64 do VBox, e os scripts de Guest Additions/clipboard/resize
-    # são pulados (VBOX_ONLY_SCRIPTS) no laço de provisionamento abaixo.
-    config.vm.provider "qemu" do |qe|
-      qe.arch        = "aarch64"
-      qe.machine     = "virt,accel=hvf,highmem=on"
-      qe.cpu         = "host"
-      qe.smp         = vm_cpus
-      qe.memory      = vm_memory
-      qe.net_device  = "virtio-net-pci"
-    end
-
+    # Apple Silicon: VMware Fusion (plugin vagrant-vmware-desktop). É o único
+    # provider com box Debian 13 ARM64 mantida (ver nota no topo do arquivo).
+    # Sem VirtualBox aqui — os scripts de Guest Additions/clipboard/resize são
+    # pulados (VBOX_ONLY_SCRIPTS) no laço de provisionamento abaixo.
     config.vm.provider "vmware_desktop" do |vmw|
-      vmw.gui              = true
-      vmw.vmx["memsize"]   = vm_memory
-      vmw.vmx["numvcpus"]  = vm_cpus
+      vmw.gui             = true
+      vmw.vmx["memsize"]  = vm_memory
+      vmw.vmx["numvcpus"] = vm_cpus
     end
   else
     config.vm.provider "virtualbox" do |vb|
