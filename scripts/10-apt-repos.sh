@@ -92,13 +92,19 @@ echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/microsoft.gpg] htt
 # mbstring, xml, zip, bcmath, intl). Os pacotes php8.4-* são instalados em
 # 20-packages.sh. Só adicionamos o repo quando o codename não é trixie+ (i.e.,
 # bookworm/bullseye), onde o 8.4 nativo não existe.
+#
+# Usamos o PACOTE de keyring oficial (debsuryorg-archive-keyring.deb) em vez de
+# baixar apt.gpg direto: o pacote instala o keyring no formato correto em
+# /usr/share/keyrings, evitando os erros recorrentes de BADSIG / "Splitting up
+# InRelease ... failed" que o apt.gpg cru provoca em algumas versões do apt.
 CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
 case "$CODENAME" in
   bullseye|bookworm)
-    curl -fsSL https://packages.sury.org/php/apt.gpg \
-      -o /etc/apt/keyrings/sury-php.gpg
-    chmod a+r /etc/apt/keyrings/sury-php.gpg
-    echo "deb [signed-by=/etc/apt/keyrings/sury-php.gpg] https://packages.sury.org/php/ ${CODENAME} main" \
+    curl -fsSL https://packages.sury.org/debsuryorg-archive-keyring.deb \
+      -o /tmp/debsuryorg-archive-keyring.deb
+    dpkg -i /tmp/debsuryorg-archive-keyring.deb
+    rm -f /tmp/debsuryorg-archive-keyring.deb
+    echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ ${CODENAME} main" \
       > /etc/apt/sources.list.d/sury-php.list
     ;;
 esac

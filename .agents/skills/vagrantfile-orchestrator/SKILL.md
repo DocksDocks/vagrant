@@ -1,6 +1,6 @@
 ---
 name: vagrantfile-orchestrator
-description: Use when modifying the Vagrantfile: adding or reordering scripts in the SCRIPTS array, changing the inline runner that bootstraps curl and caches /tmp/vagrant-_lib.sh, adjusting host detection (detect_host_memory_mb, detect_host_cpus, detect_audio_driver) or the 5-tier resource-profile selection (build_profiles/select_profile, RAM_TIER_PCT/CPU_TIER_PCT, DEFAULT_TIER, 75%-of-host cap) with its host-aware interactive arrow-key menu (alt-screen io/console; Unix reads the ANSI burst via read_nonblock, Windows reads getch scancodes; ↑/↓/j/k/1-5/Enter/q) and .vagrant/last_profile persistence plus VM_PROFILE=1..5 one-shot override (order: VM_PROFILE, saved, DEFAULT_TIER), tweaking the VirtualBox vb.customize block (--vram 256, --graphicscontroller vmsvga, bidirectional clipboard/draganddrop, --audio-driver), forwarding env vars to provisioners (SCRIPTS_REPO, SCRIPTS_REF, VAGRANT_SCRIPTS_DIR, FORCE_REINSTALL), or switching local-dev (/vagrant/scripts) and remote-fetch (raw.githubusercontent.com) modes. Not for shell-script conventions in the per-concern scripts, VMSVGA gotchas, or ADR authoring.
+description: Use when modifying the Vagrantfile: the host-arch branch (is_mac_arm = RUBY_PLATFORM darwin + host_cpu arm64) that picks box + provider (bento/debian-13 + virtualbox on x86_64, ARM_BOX/utm/bookworm + utm on Apple Silicon) and the VBOX_ONLY_SCRIPTS skip (30/50/51), adding or reordering scripts in the SCRIPTS array, changing the inline runner that bootstraps curl and caches /tmp/vagrant-_lib.sh, adjusting host detection (detect_host_memory_mb, detect_host_cpus, detect_audio_driver) or the 5-tier resource-profile selection (build_profiles/select_profile, RAM_TIER_PCT/CPU_TIER_PCT, DEFAULT_TIER, 75%-of-host cap) with its host-aware interactive arrow-key menu (alt-screen io/console; Unix reads the ANSI burst via read_nonblock, Windows reads getch scancodes; ↑/↓/j/k/1-5/Enter/q) and .vagrant/last_profile persistence plus VM_PROFILE=1..5 one-shot override (order: VM_PROFILE, saved, DEFAULT_TIER), tweaking the VirtualBox vb.customize block (--vram 256, --graphicscontroller vmsvga, bidirectional clipboard/draganddrop, --audio-driver) or the UTM provider block (name/memory/cpus/directory_share_mode), forwarding env vars to provisioners (SCRIPTS_REPO, SCRIPTS_REF, VAGRANT_SCRIPTS_DIR, FORCE_REINSTALL, VAGRANT_ARM_BOX), or switching local-dev (/vagrant/scripts) and remote-fetch (raw.githubusercontent.com) modes. Not for shell-script conventions in the per-concern scripts, VMSVGA gotchas, or ADR authoring.
 user-invocable: false
 metadata:
   pattern: tool-wrapper
@@ -8,7 +8,8 @@ metadata:
     - "Vagrantfile"
     - "plans/0002-split-vagrantfile.md"
     - "plans/0005-windows-console-arrow-keys.md"
-  updated: "2026-06-03"
+    - "plans/0009-multi-platform-arm64.md"
+  updated: "2026-06-06"
 ---
 
 # Vagrantfile Orchestrator
@@ -18,11 +19,15 @@ The `SCRIPTS` array in `Vagrantfile:72-88` is the single source of ordering trut
 </constraint>
 
 <constraint>
-The base box MUST be `bento/debian-13`. `debian/trixie64` is libvirt-only (Debian bug #1110834); `debian/testing64` tracks Forky (Debian 14 dev) where Tilix and other packages get auto-removed. Source: `Vagrantfile:91`, `CLAUDE.md`.
+On the **x86_64 / VirtualBox** path the base box MUST be `bento/debian-13`. `debian/trixie64` is libvirt-only (Debian bug #1110834); `debian/testing64` tracks Forky (Debian 14 dev) where Tilix and other packages get auto-removed. Source: `Vagrantfile` (`config.vm.box = is_mac_arm ? ARM_BOX : "bento/debian-13"`), `CLAUDE.md`.
 </constraint>
 
 <constraint>
-The graphics controller MUST be `vmsvga`. VBoxSVGA is Windows-only and causes black screen from boot on Linux guests. Source: `Vagrantfile:241`.
+On **Apple Silicon (ARM64)** the box/provider are chosen by `is_mac_arm` — `ARM_BOX` (default `utm/bookworm`, Debian 12) on the **UTM** provider (`vagrant_utm`). Do NOT change this to VirtualBox (no ARM build) or `vagrant-qemu` (headless — drops the XFCE desktop), and do NOT "fix" the box to Debian 13 (no free-provider Trixie arm64 box exists). The VirtualBox-only scripts `30`/`50`/`51` (`VBOX_ONLY_SCRIPTS`) MUST stay skipped on this path or provisioning aborts under `set -euo pipefail`. Source: `Vagrantfile`, `plans/0009-multi-platform-arm64.md`.
+</constraint>
+
+<constraint>
+The graphics controller MUST be `vmsvga` (VirtualBox path only). VBoxSVGA is Windows-only and causes black screen from boot on Linux guests. Source: `Vagrantfile` (`vb.customize ... --graphicscontroller vmsvga`).
 </constraint>
 
 ## When to Use

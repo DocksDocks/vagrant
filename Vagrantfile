@@ -321,7 +321,7 @@ SCRIPTS = %w[
 ]
 
 # Scripts que dependem do VirtualBox (Guest Additions e os workarounds que ele
-# habilita). Em Mac ARM (provider QEMU/VMware) não há VBox, então são pulados —
+# habilita). Em Mac ARM (provider UTM) não há VBox, então são pulados —
 # rodá-los abortaria o provisionamento (set -euo pipefail) sem nenhum ganho.
 VBOX_ONLY_SCRIPTS = %w[
   30-guest-additions
