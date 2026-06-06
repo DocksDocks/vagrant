@@ -75,7 +75,7 @@ The scripts detect Debian vs Ubuntu from `/etc/os-release`, so they adapt the Do
 
 ## Building your own Debian 13 (Trixie) arm64 box
 
-Only needed if you want full Debian parity (glibc 2.41, native PHP 8.4, the Night Owl theming). The `vagrant_utm` author ships the tooling:
+Only needed if you want full Debian parity (glibc 2.41, native PHP 8.4, the Night Owl theming). A ready-to-follow scaffold lives in [`box/debian-13-arm64/`](../box/debian-13-arm64/) (guide + Trixie image values + a checksum helper); it drives the `vagrant_utm` author's Packer toolchain:
 
 ```bash
 brew install packer
