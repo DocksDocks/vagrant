@@ -13,26 +13,28 @@ HOST_OS = RbConfig::CONFIG['host_os']
 WINDOWS = !(HOST_OS =~ /mswin|mingw|cygwin/i).nil?
 
 # ── Arquitetura do host: macOS Apple Silicon (ARM64) ────
-# O VirtualBox não roda em Apple Silicon (sem build aarch64 estável). Quando o
-# host é um Mac ARM trocamos a base box para uma imagem Debian ARM64 e usamos o
-# provider UTM (plugin vagrant_utm) no lugar do VirtualBox, e pulamos os scripts
-# de otimização específicos do VBox (Guest Additions, supervisor de clipboard,
-# auto-resize), que falhariam sem o VirtualBox. Em qualquer outro host (Windows
-# x86_64, Linux x86_64, Intel Mac) o caminho VirtualBox permanece intacto.
+# O VirtualBox não roda em Apple Silicon de forma usável (a partir do 7.1 há um
+# build ARM, mas é developer-preview: só guests ARM, sem box Vagrant, sem Guest
+# Additions Linux). Quando o host é um Mac ARM trocamos a base box para uma
+# imagem ARM64 e usamos o provider UTM (plugin vagrant_utm) no lugar do
+# VirtualBox, e pulamos os scripts específicos do VBox (Guest Additions,
+# supervisor de clipboard, auto-resize). Em qualquer outro host (Windows x86_64,
+# Linux x86_64, Intel Mac) o caminho VirtualBox permanece intacto.
 #
-# Por que UTM + Debian 12 (Bookworm), e não QEMU/Trixie:
-#   • vagrant-qemu roda headless (-display none) — perderíamos todo o desktop
-#     XFCE que provisionamos. UTM dá uma janela gráfica nativa via QEMU/HVF.
-#   • Não há box Debian 13 (Trixie) ARM64 publicada para um provider livre (a
-#     única Trixie aarch64 mantida é VMware-only). A box UTM pronta é Debian 12
-#     (utm/bookworm). A única diferença que importa para nós é o PHP: Bookworm
-#     traz 8.2, e o projeto exige 8.4 — resolvido pelo repo Sury (deb.sury.org)
-#     em 10/20-*.sh, que publica php8.4-* para Bookworm também em arm64. O
-#     fallback de codename do Docker em 10-apt-repos.sh cobre o resto.
-# Sobrescreva o nome da box via VAGRANT_ARM_BOX (ex.: uma imagem Trixie própria).
-# Requer no host: `vagrant plugin install vagrant_utm` + UTM instalado.
+# Box padrão no Apple Silicon: Ubuntu 24.04 LTS (utm/ubuntu-24.04).
+#   • É a box UTM pronta mais moderna e compatível com nossos scripts (apt):
+#     glibc 2.39 (binários pré-compilados recentes funcionam, ex.: rtk pede
+#     GLIBC_2.39), e PHP 8.4 via PPA ondrej/php (mesmo mantenedor do Sury).
+#   • Evita o atraso do Debian 12 Bookworm (glibc 2.36) sem precisar construir
+#     uma box própria. Não há box Debian 13 Trixie arm64 para provider livre.
+#   • Como é Ubuntu (não Debian), os scripts detectam o ID em /etc/os-release e
+#     ajustam repos (Docker/PHP) e navegador; a personalização XFCE "Night Owl"
+#     (41/45) é pulada no Ubuntu — fica um XFCE funcional, sem o tema custom.
+# Sobrescreva via VAGRANT_ARM_BOX, ex.: utm/bookworm (Debian 12) ou uma box
+# Debian 13 Trixie arm64 própria. Requer no host: vagrant plugin install
+# vagrant_utm + UTM instalado.
 is_mac_arm = RUBY_PLATFORM.include?("darwin") && RbConfig::CONFIG["host_cpu"].include?("arm64")
-ARM_BOX = ENV.fetch("VAGRANT_ARM_BOX", "utm/bookworm")
+ARM_BOX = ENV.fetch("VAGRANT_ARM_BOX", "utm/ubuntu-24.04")
 
 def detect_host_memory_mb
   if HOST_OS =~ /darwin/i
@@ -332,10 +334,11 @@ VBOX_ONLY_SCRIPTS = %w[
 Vagrant.configure("2") do |config|
   # ── Base box (dependente da arquitetura) ──────────────
   # x86_64 (Windows/Linux/Intel Mac): bento/debian-13 (Trixie) sobre VirtualBox
-  # — ver constraint da base box em CLAUDE.md. Mac ARM: Debian 12 (Bookworm)
-  # aarch64 via UTM (ARM_BOX, padrão utm/bookworm), pois o bento/debian-13 não
-  # tem build aarch64, o VirtualBox não roda em Apple Silicon e não há box Trixie
-  # arm64 para provider livre (ver nota no topo do arquivo).
+  # — ver constraint da base box em CLAUDE.md. Mac ARM: Ubuntu 24.04 LTS aarch64
+  # via UTM (ARM_BOX, padrão utm/ubuntu-24.04), pois o bento/debian-13 não tem
+  # build aarch64, o VirtualBox não roda em Apple Silicon e não há box Debian 13
+  # arm64 para provider livre (ver nota no topo do arquivo). Os scripts detectam
+  # Debian vs Ubuntu via /etc/os-release.
   config.vm.box = is_mac_arm ? ARM_BOX : "bento/debian-13"
   config.vm.hostname = "dev-box"
 

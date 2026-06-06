@@ -57,18 +57,26 @@ if [ "$(dpkg --print-architecture)" = "amd64" ]; then
     > /etc/apt/sources.list.d/google-chrome.list
 fi
 
-curl -fsSL https://download.docker.com/linux/debian/gpg | \
-  gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
-chmod a+r /etc/apt/keyrings/docker.gpg
-
-ARCH=$(dpkg --print-architecture)
+# Identidade da distro (compartilhada pelos blocos Docker e PHP abaixo).
+# DISTRO_ID = debian | ubuntu; CODENAME = bookworm/trixie/noble/...
+# shellcheck source=/dev/null
+DISTRO_ID=$(. /etc/os-release && echo "$ID")
 # shellcheck source=/dev/null
 CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
-# Docker pode não ter repo para trixie ainda — fallback para bookworm
-if ! curl -fsSL "https://download.docker.com/linux/debian/dists/${CODENAME}/Release" &>/dev/null; then
-  CODENAME="bookworm"
+ARCH=$(dpkg --print-architecture)
+
+# Docker: repo específico da distro (linux/debian ou linux/ubuntu). Se o repo
+# não tiver o codename atual (ex.: Debian Trixie ainda sem repo Docker), cai
+# para um codename LTS estável da mesma família.
+DOCKER_BASE="https://download.docker.com/linux/${DISTRO_ID}"
+curl -fsSL "${DOCKER_BASE}/gpg" | \
+  gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+DOCKER_CODENAME="$CODENAME"
+if ! curl -fsSL "${DOCKER_BASE}/dists/${DOCKER_CODENAME}/Release" &>/dev/null; then
+  if [ "$DISTRO_ID" = "ubuntu" ]; then DOCKER_CODENAME="jammy"; else DOCKER_CODENAME="bookworm"; fi
 fi
-echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian ${CODENAME} stable" \
+echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] ${DOCKER_BASE} ${DOCKER_CODENAME} stable" \
   > /etc/apt/sources.list.d/docker.list
 
 curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
@@ -84,28 +92,35 @@ chmod a+r /etc/apt/keyrings/microsoft.gpg
 echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" \
   > /etc/apt/sources.list.d/vscode.list
 
-# ── PHP 8.4 via Sury (deb.sury.org) onde o Debian não o traz nativo ──
-# O Debian 13 (Trixie, base do box amd64) já empacota PHP 8.4. O Debian 12
-# (Bookworm, base do box arm64/UTM) só traz 8.2, e PHP 8.4 é requisito do
-# projeto — então adicionamos o repo do Ondřej Surý, que publica 8.4 para
-# Bookworm em amd64 E arm64, incluindo as extensões que usamos (cli, curl,
-# mbstring, xml, zip, bcmath, intl). Os pacotes php8.4-* são instalados em
-# 20-packages.sh. Só adicionamos o repo quando o codename não é trixie+ (i.e.,
-# bookworm/bullseye), onde o 8.4 nativo não existe.
-#
-# Usamos o PACOTE de keyring oficial (debsuryorg-archive-keyring.deb) em vez de
-# baixar apt.gpg direto: o pacote instala o keyring no formato correto em
-# /usr/share/keyrings, evitando os erros recorrentes de BADSIG / "Splitting up
-# InRelease ... failed" que o apt.gpg cru provoca em algumas versões do apt.
-CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
-case "$CODENAME" in
-  bullseye|bookworm)
-    curl -fsSL https://packages.sury.org/debsuryorg-archive-keyring.deb \
-      -o /tmp/debsuryorg-archive-keyring.deb
-    dpkg -i /tmp/debsuryorg-archive-keyring.deb
-    rm -f /tmp/debsuryorg-archive-keyring.deb
-    echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ ${CODENAME} main" \
-      > /etc/apt/sources.list.d/sury-php.list
+# ── PHP 8.4 onde a distro não o traz nativo ─────────────
+# PHP 8.4 é requisito do projeto. Fontes por distro (os pacotes php8.4-* são
+# instalados em 20-packages.sh):
+#   • Debian 13 Trixie: nativo (nada a fazer).
+#   • Debian 12/11 (Bookworm/Bullseye): repo Sury (deb.sury.org) — publica
+#     php8.4-* também em arm64. Usamos o PACOTE de keyring oficial
+#     (debsuryorg-archive-keyring.deb) em vez do apt.gpg cru, evitando os erros
+#     de BADSIG / "Splitting up InRelease ... failed" em algumas versões do apt.
+#   • Ubuntu (24.04 só traz 8.3): PPA ondrej/php — mesmo mantenedor do Sury,
+#     com builds arm64. add-apt-repository resolve a chave automaticamente.
+case "$DISTRO_ID" in
+  debian)
+    case "$CODENAME" in
+      bullseye|bookworm)
+        curl -fsSL https://packages.sury.org/debsuryorg-archive-keyring.deb \
+          -o /tmp/debsuryorg-archive-keyring.deb
+        dpkg -i /tmp/debsuryorg-archive-keyring.deb
+        rm -f /tmp/debsuryorg-archive-keyring.deb
+        echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ ${CODENAME} main" \
+          > /etc/apt/sources.list.d/sury-php.list
+        ;;
+    esac
+    ;;
+  ubuntu)
+    apt-get install -y -qq software-properties-common
+    # Garante o componente 'universe' — onde vivem xfce4, tilix, sassc, papirus,
+    # etc. (a imagem cloud do Ubuntu costuma já habilitar, mas não custa).
+    add-apt-repository -y universe
+    add-apt-repository -y ppa:ondrej/php
     ;;
 esac
 

@@ -14,11 +14,16 @@ export DEBIAN_FRONTEND=noninteractive
 #                     • arm64 (UTM): chromium + agentes SPICE/QEMU (clipboard,
 #                       resize e shutdown limpo), já que os scripts VBox
 #                       30/50/51 são pulados nessa arch.
-#   PHP_PKGS      — PHP 8.4 versionado (nativo no Trixie, via Sury no Bookworm;
-#                   ver 10-apt-repos.sh). Fixa 8.4 mesmo se o default do Debian
-#                   subir depois. Instalado aqui (antes do Composer, que usa php).
-# O docklike-plugin é tratado à parte (só existe no Trixie+).
+#   PHP_PKGS      — PHP 8.4 versionado (nativo no Trixie; Sury no Bookworm; PPA
+#                   ondrej/php no Ubuntu — ver 10-apt-repos.sh). Fixa 8.4 mesmo
+#                   se o default da distro subir. Instalado aqui (antes do
+#                   Composer, que usa php).
+# O docklike-plugin é tratado à parte (só existe no Trixie+/Ubuntu, não no
+# Bookworm). O navegador depende da distro: Debian usa o pacote 'chromium';
+# Ubuntu usa 'chromium-browser' (snap).
 ARCH=$(dpkg --print-architecture)
+# shellcheck source=/dev/null
+DISTRO_ID=$(. /etc/os-release && echo "$ID")
 
 COMMON_PKGS="
   git jq yq ripgrep build-essential tilix libharfbuzz-gobject0 wget zip unzip shellcheck rsync dconf-cli
@@ -37,10 +42,13 @@ COMMON_PKGS="
 
 PHP_PKGS="php8.4-cli php8.4-common php8.4-curl php8.4-mbstring php8.4-xml php8.4-zip php8.4-bcmath php8.4-intl"
 
+# Navegador por distro: Debian → 'chromium' (.deb); Ubuntu → 'chromium-browser'
+# (transitional → snap; a imagem cloud do Ubuntu já traz o snapd semeado).
+if [ "$DISTRO_ID" = "ubuntu" ]; then BROWSER_PKG="chromium-browser"; else BROWSER_PKG="chromium"; fi
 case "$ARCH" in
   amd64) PLATFORM_PKGS="google-chrome-stable" ;;
-  arm64) PLATFORM_PKGS="chromium spice-vdagent qemu-guest-agent" ;;
-  *)     PLATFORM_PKGS="chromium" ;;
+  arm64) PLATFORM_PKGS="$BROWSER_PKG spice-vdagent qemu-guest-agent" ;;
+  *)     PLATFORM_PKGS="$BROWSER_PKG" ;;
 esac
 
 echo ">> Instalando pacotes (COMMON + ${ARCH} + PHP 8.4)..."

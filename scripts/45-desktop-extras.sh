@@ -15,6 +15,14 @@ export DEBIAN_FRONTEND=noninteractive
 # shellcheck source=_lib.sh
 . "${VAGRANT_LIB_PATH:-/vagrant/scripts/_lib.sh}"
 
+# Extras de desktop XFCE (PrtSc estilo Ubuntu, bookmarks do Thunar, notifyd) são
+# parte da personalização específica do Debian. Em Ubuntu pulamos (ver 41 e a
+# nota de multi-plataforma no Vagrantfile) — fica o desktop padrão.
+if [ "$(. /etc/os-release && echo "$ID")" != "debian" ]; then
+  echo ">> $(. /etc/os-release && echo "$ID") detectado — pulando extras de desktop XFCE (apenas Debian)."
+  exit 0
+fi
+
 # ── Screenshot wrapper (region → save + clipboard) ──────
 # fetch_asset installs 0644; the wrapper must be executable.
 fetch_asset bin/screenshot-region /usr/local/bin/screenshot-region

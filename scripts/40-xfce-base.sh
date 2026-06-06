@@ -9,6 +9,12 @@ export DEBIAN_FRONTEND=noninteractive
 # shellcheck source=_lib.sh
 . "${VAGRANT_LIB_PATH:-/vagrant/scripts/_lib.sh}"
 
+# Distro do guest: o autologin + painel valem para ambos, mas a personalização
+# "Night Owl" (tema do greeter, navegador padrão Chrome/Chromium, policy do
+# Chrome) é específica do Debian. Em Ubuntu fica um XFCE funcional sem o tema
+# custom (ver 41/45 e a nota de multi-plataforma no Vagrantfile).
+DISTRO_ID=$(. /etc/os-release && echo "$ID")
+
 # ── LightDM autologin ───────────────────────────────────
 mkdir -p /etc/lightdm/lightdm.conf.d
 # Detect actual XFCE session name (varies between Debian versions)
@@ -27,8 +33,11 @@ getent group autologin >/dev/null || groupadd autologin
 usermod -aG autologin vagrant
 systemctl set-default graphical.target
 
-# LightDM greeter com Tokyo Night GTK + Papirus (tela de login)
-fetch_asset lightdm-gtk-greeter.conf /etc/lightdm/lightdm-gtk-greeter.conf
+# LightDM greeter com Tokyo Night GTK + Papirus (tela de login) — só Debian
+# (o tema Tokyonight-Dark é instalado em 41, que é pulado no Ubuntu).
+if [ "$DISTRO_ID" = "debian" ]; then
+  fetch_asset lightdm-gtk-greeter.conf /etc/lightdm/lightdm-gtk-greeter.conf
+fi
 
 # ── Painel XFCE (single bottom panel: whiskermenu + dock + systray + clock) ──
 # Escrito em /etc/xdg para ser usado como default no primeiro login
@@ -71,7 +80,12 @@ NoDisplay=true
 X-GNOME-Autostart-enabled=false
 LL
 
-# ── Navegador padrão (dependente da arquitetura) ────────
+# ── Navegador padrão + helpers + dock pins (só Debian) ──
+# A escolha de navegador padrão (Chrome/Chromium), os helpers do XFCE, o
+# mimeapps e os pins do docklike fazem parte da personalização do Debian. Em
+# Ubuntu pulamos esse bloco inteiro (o usuário define o navegador padrão); o
+# painel/dock continua funcionando, mostrando as janelas abertas.
+if [ "$DISTRO_ID" = "debian" ]; then
 # amd64: Google Chrome. arm64 (Apple Silicon / UTM): chromium do Debian,
 # pois o Chrome não tem build Linux para arm64 (ver 10/20-*.sh).
 if [ "$(dpkg --print-architecture)" = "amd64" ]; then
@@ -113,6 +127,7 @@ sed -i "s/google-chrome\.desktop/${BROWSER_DESKTOP}/g" /home/vagrant/.config/mim
 
 cp "/usr/share/applications/${BROWSER_DESKTOP}" \
    /usr/share/applications/exo-web-browser.desktop 2>/dev/null || true
+fi  # fim do bloco navegador/helpers/dock-pins (só Debian)
 
 # ── Chrome: disable hardware acceleration (VBox #15417) ─
 # VMSVGA has no real GPU. Chrome's GPU process probes it and deadlocks under

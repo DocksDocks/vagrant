@@ -9,6 +9,14 @@ export DEBIAN_FRONTEND=noninteractive
 # shellcheck source=_lib.sh
 . "${VAGRANT_LIB_PATH:-/vagrant/scripts/_lib.sh}"
 
+# A personalização "Night Owl" (tema Tokyo Night GTK) é específica do nosso
+# alvo Debian. Em Ubuntu (box arm64/UTM) pulamos — fica um XFCE funcional com o
+# tema padrão da distro. Ver nota de multi-plataforma no Vagrantfile.
+if [ "$(. /etc/os-release && echo "$ID")" != "debian" ]; then
+  echo ">> $(. /etc/os-release && echo "$ID") detectado — pulando tema XFCE Night Owl (apenas Debian)."
+  exit 0
+fi
+
 FORCE="${FORCE_REINSTALL:-0}"
 
 # ── Tokyo Night GTK theme (system-wide, pinned + commit-verified) ──
