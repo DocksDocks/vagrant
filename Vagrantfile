@@ -12,6 +12,15 @@ require 'fileutils'
 HOST_OS = RbConfig::CONFIG['host_os']
 WINDOWS = !(HOST_OS =~ /mswin|mingw|cygwin/i).nil?
 
+# ── Arquitetura do host: macOS Apple Silicon (ARM64) ────
+# O VirtualBox não roda em Apple Silicon (sem build aarch64 estável). Quando o
+# host é um Mac ARM trocamos a base box para uma imagem ARM64, ativamos um
+# provider QEMU/VMware Fusion no lugar do VirtualBox e pulamos os scripts de
+# otimização específicos do VBox (Guest Additions, supervisor de clipboard,
+# auto-resize), que falhariam sem o VirtualBox. Em qualquer outro host (Windows
+# x86_64, Linux x86_64, Intel Mac) o caminho VirtualBox permanece intacto.
+is_mac_arm = RUBY_PLATFORM.include?("darwin") && RbConfig::CONFIG["host_cpu"].include?("arm64")
+
 def detect_host_memory_mb
   if HOST_OS =~ /darwin/i
     `sysctl -n hw.memsize`.to_i / 1024 / 1024
@@ -298,8 +307,22 @@ SCRIPTS = %w[
   99-finalize
 ]
 
+# Scripts que dependem do VirtualBox (Guest Additions e os workarounds que ele
+# habilita). Em Mac ARM (provider QEMU/VMware) não há VBox, então são pulados —
+# rodá-los abortaria o provisionamento (set -euo pipefail) sem nenhum ganho.
+VBOX_ONLY_SCRIPTS = %w[
+  30-guest-additions
+  50-vboxclient-supervisor
+  51-vbox-autoresize
+].freeze
+
 Vagrant.configure("2") do |config|
-  config.vm.box = "bento/debian-13"
+  # ── Base box (dependente da arquitetura) ──────────────
+  # x86_64 (Windows/Linux/Intel Mac): bento/debian-13 (Trixie) sobre VirtualBox
+  # — ver constraint da base box em CLAUDE.md. Mac ARM: imagem Debian ARM64,
+  # pois o bento/debian-13 não tem build aarch64 e o VirtualBox não roda em
+  # Apple Silicon.
+  config.vm.box = is_mac_arm ? "perk/debian-12-arm64" : "bento/debian-13"
   config.vm.hostname = "dev-box"
 
   # ── Rede ──────────────────────────────────────────────
@@ -307,20 +330,42 @@ Vagrant.configure("2") do |config|
   # config.vm.network "forwarded_port", guest: 8080, host: 8080
 
   # ── Recursos da VM (alocação dinâmica) ───────────────
-  config.vm.provider "virtualbox" do |vb|
-    vb.name   = "debian13-dev"
-    vb.gui    = true
-    vb.memory = vm_memory
-    vb.cpus   = vm_cpus
-    vb.customize ["modifyvm", :id, "--vram", "256"]
-    vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
-    vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
-    vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
-    vb.customize ["modifyvm", :id, "--audio-driver", detect_audio_driver]
-    vb.customize ["modifyvm", :id, "--audio-controller", "hda"]
-    vb.customize ["modifyvm", :id, "--audio-enabled", "on"]
-    vb.customize ["modifyvm", :id, "--audio-out", "on"]
-    vb.customize ["modifyvm", :id, "--audio-in", "off"]
+  if is_mac_arm
+    # Apple Silicon: QEMU (plugin vagrant-qemu) acelerado por HVF é o caminho
+    # padrão; o bloco vmware_desktop (plugin vagrant-vmware-desktop) fica como
+    # alternativa para quem tem o VMware Fusion. Sem VirtualBox aqui: não há
+    # build aarch64 do VBox, e os scripts de Guest Additions/clipboard/resize
+    # são pulados (VBOX_ONLY_SCRIPTS) no laço de provisionamento abaixo.
+    config.vm.provider "qemu" do |qe|
+      qe.arch        = "aarch64"
+      qe.machine     = "virt,accel=hvf,highmem=on"
+      qe.cpu         = "host"
+      qe.smp         = vm_cpus
+      qe.memory      = vm_memory
+      qe.net_device  = "virtio-net-pci"
+    end
+
+    config.vm.provider "vmware_desktop" do |vmw|
+      vmw.gui              = true
+      vmw.vmx["memsize"]   = vm_memory
+      vmw.vmx["numvcpus"]  = vm_cpus
+    end
+  else
+    config.vm.provider "virtualbox" do |vb|
+      vb.name   = "debian13-dev"
+      vb.gui    = true
+      vb.memory = vm_memory
+      vb.cpus   = vm_cpus
+      vb.customize ["modifyvm", :id, "--vram", "256"]
+      vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
+      vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
+      vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
+      vb.customize ["modifyvm", :id, "--audio-driver", detect_audio_driver]
+      vb.customize ["modifyvm", :id, "--audio-controller", "hda"]
+      vb.customize ["modifyvm", :id, "--audio-enabled", "on"]
+      vb.customize ["modifyvm", :id, "--audio-out", "on"]
+      vb.customize ["modifyvm", :id, "--audio-in", "off"]
+    end
   end
 
   # ── Provisionamento: um shell provisioner por concern ──
@@ -328,6 +373,10 @@ Vagrant.configure("2") do |config|
   # fetch_asset). The inline runner below resolves the lib path for both
   # modes — local-dev uses /vagrant/scripts/_lib.sh, remote uses /tmp.
   SCRIPTS.each do |name|
+    # Em Mac ARM não há VirtualBox: pula Guest Additions, supervisor de
+    # clipboard e auto-resize (rodá-los abortaria com set -euo pipefail).
+    next if is_mac_arm && VBOX_ONLY_SCRIPTS.include?(name)
+
     env = {
       "SCRIPTS_REPO"        => SCRIPTS_REPO,
       "SCRIPTS_REF"         => SCRIPTS_REF,
