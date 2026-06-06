@@ -3,62 +3,63 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-# ── Instalação em lote ──────────────────────────────────
-echo ">> Instalando todos os pacotes..."
-apt-get install -y -qq \
-  git jq yq ripgrep build-essential tilix libharfbuzz-gobject0 wget zip unzip shellcheck rsync dconf-cli \
-  fd-find fzf bat htop btop tree direnv \
-  python3 python3-pip python3-venv \
-  xfce4 \
-  xfce4-notifyd xfce4-screenshooter \
-  xfce4-whiskermenu-plugin xfce4-pulseaudio-plugin xfce4-taskmanager \
-  lightdm lightdm-gtk-greeter \
-  dbus-x11 xdg-utils xclip \
-  pulseaudio alsa-utils \
-  fonts-noto-color-emoji \
-  arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme sassc \
-  gh code \
-  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+# ── Manifesto de pacotes (compartilhados vs por-plataforma) ──
+# Para não confundir, mais tarde, o que é comum e o que é específico de
+# arquitetura, os pacotes ficam em listas nomeadas:
+#   COMMON_PKGS   — instalados em TODAS as arquiteturas. Debian main + repos
+#                   externos que publicam amd64 E arm64 (gh, code, docker).
+#   PLATFORM_PKGS — específicos da arquitetura (navegador + integração do
+#                   hypervisor):
+#                     • amd64 (VirtualBox): google-chrome-stable (sem build arm64)
+#                     • arm64 (UTM): chromium + agentes SPICE/QEMU (clipboard,
+#                       resize e shutdown limpo), já que os scripts VBox
+#                       30/50/51 são pulados nessa arch.
+#   PHP_PKGS      — PHP 8.4 versionado (nativo no Trixie, via Sury no Bookworm;
+#                   ver 10-apt-repos.sh). Fixa 8.4 mesmo se o default do Debian
+#                   subir depois. Instalado aqui (antes do Composer, que usa php).
+# O docklike-plugin é tratado à parte (só existe no Trixie+).
+ARCH=$(dpkg --print-architecture)
 
-# ── Dock (xfce4-docklike-plugin) — só onde existe ───────
-# O docklike-plugin só entrou no Debian a partir do Trixie; o Bookworm (base do
-# box arm64/UTM) não o empacota. Instalamos se houver candidato; senão o painel
-# cai no plugin "tasklist"/"Window Buttons" embutido do xfce4-panel (40/45 lidam
-# com a ausência). Evita abortar o batch com "Unable to locate package".
+COMMON_PKGS="
+  git jq yq ripgrep build-essential tilix libharfbuzz-gobject0 wget zip unzip shellcheck rsync dconf-cli
+  fd-find fzf bat htop btop tree direnv
+  python3 python3-pip python3-venv
+  xfce4 xfce4-notifyd xfce4-screenshooter
+  xfce4-whiskermenu-plugin xfce4-pulseaudio-plugin xfce4-taskmanager
+  lightdm lightdm-gtk-greeter
+  dbus-x11 xdg-utils xclip
+  pulseaudio alsa-utils
+  fonts-noto-color-emoji
+  arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme sassc
+  gh code
+  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+"
+
+PHP_PKGS="php8.4-cli php8.4-common php8.4-curl php8.4-mbstring php8.4-xml php8.4-zip php8.4-bcmath php8.4-intl"
+
+case "$ARCH" in
+  amd64) PLATFORM_PKGS="google-chrome-stable" ;;
+  arm64) PLATFORM_PKGS="chromium spice-vdagent qemu-guest-agent" ;;
+  *)     PLATFORM_PKGS="chromium" ;;
+esac
+
+echo ">> Instalando pacotes (COMMON + ${ARCH} + PHP 8.4)..."
+# shellcheck disable=SC2086  # word-splitting intencional das listas de pacotes
+apt-get install -y -qq $COMMON_PKGS $PLATFORM_PKGS $PHP_PKGS
+
+# Dedup do repo do Chrome (só amd64): instalar google-chrome-stable solta um
+# deb822 (/etc/apt/sources.list.d/google-chrome.sources) que duplica o .list que
+# já mantemos em 10-apt-repos.sh — o apt avisa "configured multiple times" a cada
+# update. O Chrome não recria o arquivo, então removê-lo dedup-a o repo de vez.
+[ "$ARCH" = "amd64" ] && rm -f /etc/apt/sources.list.d/google-chrome.sources
+
+# Dock opcional: o xfce4-docklike-plugin só entrou no Debian a partir do Trixie;
+# o Bookworm não o empacota. Instala se houver candidato; senão 40-xfce-base.sh
+# troca o painel pelo tasklist embutido. Evita abortar com "Unable to locate".
 if apt-cache show xfce4-docklike-plugin >/dev/null 2>&1; then
   apt-get install -y -qq xfce4-docklike-plugin
 else
   echo ">> xfce4-docklike-plugin indisponível neste Debian — pulando (painel usa o tasklist embutido)."
-fi
-
-# ── PHP 8.4 (versão fixada em ambas as arquiteturas) ────
-# PHP 8.4 é requisito do projeto. Em vez dos metapacotes php-* (que seguem o
-# default do Debian: 8.4 no Trixie/amd64, mas 8.2 no Bookworm/arm64), instalamos
-# os pacotes versionados php8.4-*. São nativos no Trixie e vêm do repo Sury no
-# Bookworm (configurado em 10-apt-repos.sh) — garantindo 8.4 também no box
-# arm64/UTM, e fixando 8.4 no amd64 mesmo se o default do Debian subir depois.
-# Instalado antes do Composer, que precisa do php CLI.
-apt-get install -y -qq \
-  php8.4-cli php8.4-common php8.4-curl php8.4-mbstring php8.4-xml php8.4-zip php8.4-bcmath php8.4-intl
-
-# ── Navegador + integração do hypervisor (dependente da arquitetura) ──
-# O Google Chrome só publica build Linux para amd64 — instalá-lo em arm64
-# abortaria o batch (sem candidato). Em arm64 (Apple Silicon / UTM) usamos o
-# chromium do Debian e instalamos os agentes SPICE/QEMU (clipboard + resize via
-# spice-vdagent; shutdown limpo + IP via qemu-guest-agent), já que os scripts de
-# Guest Additions/clipboard do VirtualBox (30/50/51) são pulados nessa arch.
-ARCH=$(dpkg --print-architecture)
-if [ "$ARCH" = "amd64" ]; then
-  apt-get install -y -qq google-chrome-stable
-  # ── Dedup do repo do Chrome ───────────────────────────
-  # Installing google-chrome-stable drops a deb822 source
-  # (/etc/apt/sources.list.d/google-chrome.sources) that duplicates the .list we
-  # already maintain in 10-apt-repos.sh, so apt warns "Target Packages is
-  # configured multiple times" on every update. Chrome won't recreate it once
-  # removed, so dropping it here dedups the repo for good.
-  rm -f /etc/apt/sources.list.d/google-chrome.sources
-else
-  apt-get install -y -qq chromium spice-vdagent qemu-guest-agent
 fi
 
 # ── Composer ────────────────────────────────────────────
