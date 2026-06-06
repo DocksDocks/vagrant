@@ -27,7 +27,9 @@ else
 fi
 
 # ── superfile (spf) ─────────────────────────────────────
-# GitHub release pattern: superfile-linux-v${VERSION}-amd64.tar.gz.
+# GitHub release pattern: superfile-linux-v${VERSION}-${ARCH}.tar.gz, where
+# ${ARCH} is amd64 or arm64 — exactly what `dpkg --print-architecture` returns,
+# so the same name works on Apple Silicon (arm64) and x86_64 (amd64).
 # curl-pipe-tar lands the single binary straight into /usr/local/bin.
 if [[ "$FORCE" != "1" ]] && [ -x /usr/local/bin/spf ]; then
   echo ">> superfile already installed — skipping."
@@ -36,7 +38,7 @@ else
   SPF_VERSION=$(curl -fsSL --retry 4 --retry-delay 2 \
     "https://api.github.com/repos/yorukot/superfile/releases/latest" \
     | jq -r '.tag_name' | sed 's/^v//')
-  SPF_DIRNAME="superfile-linux-v${SPF_VERSION}-amd64"
+  SPF_DIRNAME="superfile-linux-v${SPF_VERSION}-$(dpkg --print-architecture)"
   curl -fsSL --retry 4 --retry-delay 2 \
     -o /tmp/superfile.tar.gz \
     "https://github.com/yorukot/superfile/releases/download/v${SPF_VERSION}/${SPF_DIRNAME}.tar.gz"

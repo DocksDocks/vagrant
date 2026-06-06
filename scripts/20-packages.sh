@@ -18,16 +18,28 @@ apt-get install -y -qq \
   pulseaudio alsa-utils \
   fonts-noto-color-emoji \
   arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme sassc \
-  google-chrome-stable gh code \
+  gh code \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# ── Dedup do repo do Chrome ─────────────────────────────
-# Installing google-chrome-stable drops a deb822 source
-# (/etc/apt/sources.list.d/google-chrome.sources) that duplicates the .list we
-# already maintain in 10-apt-repos.sh, so apt warns "Target Packages is
-# configured multiple times" on every update. Chrome won't recreate it once
-# removed, so dropping it here dedups the repo for good.
-rm -f /etc/apt/sources.list.d/google-chrome.sources
+# ── Navegador + integração do hypervisor (dependente da arquitetura) ──
+# O Google Chrome só publica build Linux para amd64 — instalá-lo em arm64
+# abortaria o batch (sem candidato). Em arm64 (Apple Silicon / VMware) usamos o
+# chromium do Debian e instalamos open-vm-tools-desktop para clipboard/resize,
+# já que os scripts de Guest Additions/clipboard do VirtualBox (30/50/51) são
+# pulados nessa arquitetura.
+ARCH=$(dpkg --print-architecture)
+if [ "$ARCH" = "amd64" ]; then
+  apt-get install -y -qq google-chrome-stable
+  # ── Dedup do repo do Chrome ───────────────────────────
+  # Installing google-chrome-stable drops a deb822 source
+  # (/etc/apt/sources.list.d/google-chrome.sources) that duplicates the .list we
+  # already maintain in 10-apt-repos.sh, so apt warns "Target Packages is
+  # configured multiple times" on every update. Chrome won't recreate it once
+  # removed, so dropping it here dedups the repo for good.
+  rm -f /etc/apt/sources.list.d/google-chrome.sources
+else
+  apt-get install -y -qq chromium open-vm-tools-desktop
+fi
 
 # ── Composer ────────────────────────────────────────────
 # Verify the installer's SHA-384 against the canonical hash published at

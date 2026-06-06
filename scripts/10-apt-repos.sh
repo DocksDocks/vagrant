@@ -46,10 +46,16 @@ echo "America/Sao_Paulo" > /etc/timezone
 # ── Repos externos (Chrome + Docker + GitHub CLI) ───────
 echo ">> Configurando repositórios externos..."
 
-curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | \
-  gpg --batch --yes --dearmor -o /etc/apt/keyrings/google-chrome.gpg
-echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main' \
-  > /etc/apt/sources.list.d/google-chrome.list
+# O Google Chrome só publica build Linux para amd64. Em arm64 (Apple Silicon /
+# VMware) usamos o chromium do Debian (instalado em 20-packages.sh), então o
+# repo do Chrome só é adicionado em amd64 — em arm64 ele só geraria ruído de
+# "doesn't support architecture" no apt update.
+if [ "$(dpkg --print-architecture)" = "amd64" ]; then
+  curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | \
+    gpg --batch --yes --dearmor -o /etc/apt/keyrings/google-chrome.gpg
+  echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main' \
+    > /etc/apt/sources.list.d/google-chrome.list
+fi
 
 curl -fsSL https://download.docker.com/linux/debian/gpg | \
   gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
