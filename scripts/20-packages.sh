@@ -11,7 +11,7 @@ apt-get install -y -qq \
   python3 python3-pip python3-venv \
   xfce4 \
   xfce4-notifyd xfce4-screenshooter \
-  xfce4-whiskermenu-plugin xfce4-docklike-plugin xfce4-pulseaudio-plugin xfce4-taskmanager \
+  xfce4-whiskermenu-plugin xfce4-pulseaudio-plugin xfce4-taskmanager \
   lightdm lightdm-gtk-greeter \
   dbus-x11 xdg-utils xclip \
   pulseaudio alsa-utils \
@@ -19,6 +19,17 @@ apt-get install -y -qq \
   arc-theme papirus-icon-theme fonts-noto fonts-noto-core dmz-cursor-theme sassc \
   gh code \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# ── Dock (xfce4-docklike-plugin) — só onde existe ───────
+# O docklike-plugin só entrou no Debian a partir do Trixie; o Bookworm (base do
+# box arm64/UTM) não o empacota. Instalamos se houver candidato; senão o painel
+# cai no plugin "tasklist"/"Window Buttons" embutido do xfce4-panel (40/45 lidam
+# com a ausência). Evita abortar o batch com "Unable to locate package".
+if apt-cache show xfce4-docklike-plugin >/dev/null 2>&1; then
+  apt-get install -y -qq xfce4-docklike-plugin
+else
+  echo ">> xfce4-docklike-plugin indisponível neste Debian — pulando (painel usa o tasklist embutido)."
+fi
 
 # ── PHP 8.4 (versão fixada em ambas as arquiteturas) ────
 # PHP 8.4 é requisito do projeto. Em vez dos metapacotes php-* (que seguem o

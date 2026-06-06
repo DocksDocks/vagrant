@@ -40,6 +40,16 @@ fetch_asset xfce4-panel.xml /etc/xdg/xfce4/panel/default.xml
 cp /etc/xdg/xfce4/panel/default.xml \
    /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
 
+# Fallback do dock: o xfce4-docklike-plugin não existe no Bookworm (só Trixie+;
+# ver 20-packages.sh). Se não estiver instalado, troca o plugin do painel pelo
+# "tasklist" (Window Buttons) embutido no xfce4-panel, mantendo um alternador de
+# janelas funcional. No Trixie/amd64 (docklike presente) nada muda.
+if ! dpkg -s xfce4-docklike-plugin >/dev/null 2>&1; then
+  sed -i 's/value="docklike"/value="tasklist"/' \
+    /etc/xdg/xfce4/panel/default.xml \
+    /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
+fi
+
 # ── Disable screen lock + idle blank + DPMS ─────────────
 # VM autologs in as `vagrant`; locking only breaks VBoxClient --clipboard
 # (upstream Oracle bugs #5266 / #19234, unfixed) and adds no real security.
