@@ -23,10 +23,10 @@ apt-get install -y -qq \
 
 # ── Navegador + integração do hypervisor (dependente da arquitetura) ──
 # O Google Chrome só publica build Linux para amd64 — instalá-lo em arm64
-# abortaria o batch (sem candidato). Em arm64 (Apple Silicon / VMware) usamos o
-# chromium do Debian e instalamos open-vm-tools-desktop para clipboard/resize,
-# já que os scripts de Guest Additions/clipboard do VirtualBox (30/50/51) são
-# pulados nessa arquitetura.
+# abortaria o batch (sem candidato). Em arm64 (Apple Silicon / UTM) usamos o
+# chromium do Debian e instalamos os agentes SPICE/QEMU (clipboard + resize via
+# spice-vdagent; shutdown limpo + IP via qemu-guest-agent), já que os scripts de
+# Guest Additions/clipboard do VirtualBox (30/50/51) são pulados nessa arch.
 ARCH=$(dpkg --print-architecture)
 if [ "$ARCH" = "amd64" ]; then
   apt-get install -y -qq google-chrome-stable
@@ -38,7 +38,7 @@ if [ "$ARCH" = "amd64" ]; then
   # removed, so dropping it here dedups the repo for good.
   rm -f /etc/apt/sources.list.d/google-chrome.sources
 else
-  apt-get install -y -qq chromium open-vm-tools-desktop
+  apt-get install -y -qq chromium spice-vdagent qemu-guest-agent
 fi
 
 # ── Composer ────────────────────────────────────────────

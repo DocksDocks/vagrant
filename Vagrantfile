@@ -14,22 +14,24 @@ WINDOWS = !(HOST_OS =~ /mswin|mingw|cygwin/i).nil?
 
 # ── Arquitetura do host: macOS Apple Silicon (ARM64) ────
 # O VirtualBox não roda em Apple Silicon (sem build aarch64 estável). Quando o
-# host é um Mac ARM trocamos a base box para uma imagem Debian 13 ARM64 e
-# usamos o provider VMware Fusion (vmware_desktop) no lugar do VirtualBox, e
-# pulamos os scripts de otimização específicos do VBox (Guest Additions,
-# supervisor de clipboard, auto-resize), que falhariam sem o VirtualBox. Em
-# qualquer outro host (Windows x86_64, Linux x86_64, Intel Mac) o caminho
-# VirtualBox permanece intacto.
+# host é um Mac ARM trocamos a base box para uma imagem Debian ARM64 e usamos o
+# provider UTM (plugin vagrant_utm) no lugar do VirtualBox, e pulamos os scripts
+# de otimização específicos do VBox (Guest Additions, supervisor de clipboard,
+# auto-resize), que falhariam sem o VirtualBox. Em qualquer outro host (Windows
+# x86_64, Linux x86_64, Intel Mac) o caminho VirtualBox permanece intacto.
 #
-# Por que VMware e não QEMU: não existe box Debian 13 (Trixie) ARM64 mantida
-# para o provider QEMU no Vagrant Cloud — a única imagem Trixie aarch64
-# publicada e mantida (defanator/debian-13) é VMware-only. Trocar para Debian
-# 12 (perk/debian-12-arm64) quebraria nossas premissas de Trixie (PHP 8.4,
-# conjunto de pacotes, constraint da base box em CLAUDE.md), então mantemos
-# Debian 13 + VMware. O nome da box é sobrescrevível via VAGRANT_ARM_BOX para
-# quem preferir uma imagem própria/construída localmente.
+# Por que UTM + Debian 12 (Bookworm), e não QEMU/Trixie:
+#   • vagrant-qemu roda headless (-display none) — perderíamos todo o desktop
+#     XFCE que provisionamos. UTM dá uma janela gráfica nativa via QEMU/HVF.
+#   • Não há box Debian 13 (Trixie) ARM64 publicada para um provider livre (a
+#     única Trixie aarch64 mantida é VMware-only). A box UTM pronta é Debian 12
+#     (utm/bookworm). Bookworm difere pouco para nossos scripts: nomes de pacote
+#     genéricos (php-cli, etc.) e o fallback de codename do Docker em
+#     10-apt-repos.sh já cobrem a diferença.
+# Sobrescreva o nome da box via VAGRANT_ARM_BOX (ex.: uma imagem Trixie própria).
+# Requer no host: `vagrant plugin install vagrant_utm` + UTM instalado.
 is_mac_arm = RUBY_PLATFORM.include?("darwin") && RbConfig::CONFIG["host_cpu"].include?("arm64")
-ARM_BOX = ENV.fetch("VAGRANT_ARM_BOX", "defanator/debian-13")
+ARM_BOX = ENV.fetch("VAGRANT_ARM_BOX", "utm/bookworm")
 
 def detect_host_memory_mb
   if HOST_OS =~ /darwin/i
@@ -329,10 +331,10 @@ VBOX_ONLY_SCRIPTS = %w[
 Vagrant.configure("2") do |config|
   # ── Base box (dependente da arquitetura) ──────────────
   # x86_64 (Windows/Linux/Intel Mac): bento/debian-13 (Trixie) sobre VirtualBox
-  # — ver constraint da base box em CLAUDE.md. Mac ARM: Debian 13 (Trixie)
-  # aarch64 via VMware (ARM_BOX, padrão defanator/debian-13), pois o
-  # bento/debian-13 não tem build aarch64 e o VirtualBox não roda em Apple
-  # Silicon. Mantém Debian 13 em ambas as arquiteturas (sem regredir p/ Bookworm).
+  # — ver constraint da base box em CLAUDE.md. Mac ARM: Debian 12 (Bookworm)
+  # aarch64 via UTM (ARM_BOX, padrão utm/bookworm), pois o bento/debian-13 não
+  # tem build aarch64, o VirtualBox não roda em Apple Silicon e não há box Trixie
+  # arm64 para provider livre (ver nota no topo do arquivo).
   config.vm.box = is_mac_arm ? ARM_BOX : "bento/debian-13"
   config.vm.hostname = "dev-box"
 
@@ -342,14 +344,17 @@ Vagrant.configure("2") do |config|
 
   # ── Recursos da VM (alocação dinâmica) ───────────────
   if is_mac_arm
-    # Apple Silicon: VMware Fusion (plugin vagrant-vmware-desktop). É o único
-    # provider com box Debian 13 ARM64 mantida (ver nota no topo do arquivo).
-    # Sem VirtualBox aqui — os scripts de Guest Additions/clipboard/resize são
-    # pulados (VBOX_ONLY_SCRIPTS) no laço de provisionamento abaixo.
-    config.vm.provider "vmware_desktop" do |vmw|
-      vmw.gui             = true
-      vmw.vmx["memsize"]  = vm_memory
-      vmw.vmx["numvcpus"] = vm_cpus
+    # Apple Silicon: UTM (plugin vagrant_utm) — QEMU acelerado por HVF com janela
+    # gráfica nativa (o provider vagrant-qemu seria headless). Sem VirtualBox
+    # aqui: os scripts de Guest Additions/clipboard/resize são pulados
+    # (VBOX_ONLY_SCRIPTS) no laço abaixo; clipboard/resize vêm do spice-vdagent
+    # instalado em 20-packages.sh. directory_share_mode=virtFS monta /vagrant
+    # (9p) para o modo local-dev; o modo padrão busca os scripts no GitHub.
+    config.vm.provider "utm" do |u|
+      u.name                 = "debian-dev-arm64"
+      u.memory               = vm_memory
+      u.cpus                 = vm_cpus
+      u.directory_share_mode = "virtFS"
     end
   else
     config.vm.provider "virtualbox" do |vb|

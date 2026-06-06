@@ -62,7 +62,7 @@ X-GNOME-Autostart-enabled=false
 LL
 
 # ── Navegador padrão (dependente da arquitetura) ────────
-# amd64: Google Chrome. arm64 (Apple Silicon / VMware): chromium do Debian,
+# amd64: Google Chrome. arm64 (Apple Silicon / UTM): chromium do Debian,
 # pois o Chrome não tem build Linux para arm64 (ver 10/20-*.sh).
 if [ "$(dpkg --print-architecture)" = "amd64" ]; then
   BROWSER_DESKTOP=google-chrome.desktop
@@ -108,7 +108,7 @@ cp "/usr/share/applications/${BROWSER_DESKTOP}" \
 # VMSVGA has no real GPU. Chrome's GPU process probes it and deadlocks under
 # load (e.g. `next dev` + Chrome + Claude). Managed policy is the official
 # Google mechanism — survives apt upgrades, applies to every launch path.
-# Específico do Chrome + VMSVGA: só no caminho amd64/VirtualBox. Em arm64/VMware
+# Específico do Chrome + VMSVGA: só no caminho amd64/VirtualBox. Em arm64/UTM
 # não há Chrome nem VMSVGA, então a policy não se aplica.
 if [ "$(dpkg --print-architecture)" = "amd64" ]; then
   fetch_asset chrome-policy-no-gpu.json /etc/opt/chrome/policies/managed/no-gpu.json

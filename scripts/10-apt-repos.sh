@@ -47,8 +47,8 @@ echo "America/Sao_Paulo" > /etc/timezone
 echo ">> Configurando repositórios externos..."
 
 # O Google Chrome só publica build Linux para amd64. Em arm64 (Apple Silicon /
-# VMware) usamos o chromium do Debian (instalado em 20-packages.sh), então o
-# repo do Chrome só é adicionado em amd64 — em arm64 ele só geraria ruído de
+# UTM) usamos o chromium do Debian (instalado em 20-packages.sh), então o repo
+# do Chrome só é adicionado em amd64 — em arm64 ele só geraria ruído de
 # "doesn't support architecture" no apt update.
 if [ "$(dpkg --print-architecture)" = "amd64" ]; then
   curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | \
