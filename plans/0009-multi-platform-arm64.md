@@ -1,8 +1,10 @@
-# 0009 — Multi-platform: macOS Apple Silicon (ARM64) via UTM + Debian 12 Bookworm
+# 0009 — Multi-platform: macOS Apple Silicon (ARM64) via UTM + Ubuntu 24.04 LTS
 
-**Status:** Proposed (implemented on branch, not yet merged to `main`)
-**Branch:** `claude/vagrantfile-multi-platform-Uif2d`
-**Scope:** `Vagrantfile`, `scripts/10-apt-repos.sh`, `scripts/20-packages.sh`, `scripts/40-xfce-base.sh`, `scripts/65-superfile-fonts.sh`, `AGENTS.md`, `.agents/skills/vagrantfile-orchestrator/SKILL.md`
+**Status:** Accepted (merged to `main`)
+**Branch:** `claude/vagrantfile-multi-platform-Uif2d` (merged)
+**Scope:** `Vagrantfile`, `scripts/10-apt-repos.sh`, `scripts/20-packages.sh`, `scripts/40-xfce-base.sh`, `scripts/41-xfce-theme.sh`, `scripts/45-desktop-extras.sh`, `scripts/65-superfile-fonts.sh`, `scripts/90-claude-config-sync.sh`, `AGENTS.md`, `README.md`, `docs/macos-apple-silicon.md`, `.agents/skills/vagrantfile-orchestrator/SKILL.md`
+
+> **Box pivot (post-testing): Debian 12 Bookworm → Ubuntu 24.04 LTS.** The first cut defaulted the ARM box to `utm/bookworm`, with PHP 8.4 from Sury. Real provisioning surfaced Bookworm's age: its **glibc 2.36** can't run modern prebuilt binaries — `rtk` (from the config-sync step) needs **`GLIBC_2.39`** and aborted. Rather than build a Debian 13 box, the default moved to **`utm/ubuntu-24.04`** (glibc **2.39**, PHP 8.4 via `ppa:ondrej/php`), the most modern *ready* UTM box that's still `apt`-based. Scripts are now Debian-*and*-Ubuntu aware (`/etc/os-release`), and `VAGRANT_ARM_BOX` still selects `utm/bookworm` or a self-built Trixie box. The Bookworm rationale below is retained for context.
 
 ## Problem
 

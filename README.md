@@ -6,22 +6,37 @@ A complete development VM running Debian 13 (Trixie), provisioned automatically 
 
 ## Prerequisites
 
-Install both before you start:
+The hypervisor depends on your machine. Pick **one** track, then run `vagrant up` — the `Vagrantfile` auto-detects the host and selects the right box/provider.
 
-1. **VirtualBox** — the hypervisor that runs the VM under the hood.
-   Download: https://www.virtualbox.org/wiki/Downloads
+### Track A — Windows, Linux, or Intel Mac (x86_64)
 
-2. **Vagrant** — the tool that creates and configures the VM from `Vagrantfile`.
-   Download: https://developer.hashicorp.com/vagrant/install
+1. **VirtualBox** — the hypervisor that runs the VM. Download: https://www.virtualbox.org/wiki/Downloads
+2. **Vagrant** — creates/configures the VM from `Vagrantfile`. Download: https://developer.hashicorp.com/vagrant/install
 
-> Both are available on Windows, macOS, and Linux. After installing, restart your terminal so the `vagrant` and `VBoxManage` commands are on `PATH`.
+You get **Debian 13 (Trixie)** with the full Night Owl XFCE desktop. Restart your terminal after installing so `vagrant` and `VBoxManage` are on `PATH`.
+
+### Track B — macOS Apple Silicon (M1/M2/M3/M4)
+
+VirtualBox can't run our x86 box on Apple Silicon, so this track uses **UTM** (QEMU + Apple's Hypervisor.framework). Everything installs via [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask vagrant      # the VM tool
+brew install --cask utm          # the hypervisor (GUI, Apple-native)
+vagrant plugin install vagrant_utm   # teaches Vagrant to drive UTM
+```
+
+Then **open UTM once** (from Applications) so macOS grants it permission, and quit it. That's it — no VirtualBox.
+
+You get **Ubuntu 24.04 LTS (arm64)** with a functional XFCE desktop (the Night Owl theming is Debian-only and is skipped here), **PHP 8.4** (via the `ondrej/php` PPA), and all the CLI tooling. Ubuntu 24.04 is used because there's no free Debian 13 arm64 box and its modern glibc (2.39) runs recent prebuilt binaries that Debian 12 can't.
+
+> **Override the box** (optional): `VAGRANT_ARM_BOX=utm/bookworm vagrant up` for Debian 12, or point it at your own Debian 13 Trixie arm64 box. See [docs/macos-apple-silicon.md](./docs/macos-apple-silicon.md) for the full rationale, the UTM box-building path, and troubleshooting.
 
 ## What's installed
 
 | Tool             | Notes                                                            |
 |------------------|------------------------------------------------------------------|
 | **XFCE 4**       | Lightweight desktop with LightDM autologin (no goodies bloat)    |
-| **Google Chrome** | Pre-installed (official Google repo)                            |
+| **Google Chrome / Chromium** | Chrome on x86_64 (official Google repo); Chromium on Apple Silicon (no Chrome arm64 build) |
 | **Git**          | From the Debian repository                                       |
 | **GitHub CLI**   | `gh` — PRs, issues, repo ops from the terminal                   |
 | **Python 3**     | With `pip` and `venv`                                            |
@@ -119,7 +134,9 @@ The finalize banner will only nag you about whichever of these still need to be 
 vagrant up
 ```
 
-On the first run, Vagrant downloads the Debian 13 image, creates the VirtualBox VM, and runs all of provisioning (package install + XFCE setup). This takes a few minutes depending on your connection. The VM auto-reboots after provisioning and lands you in the XFCE desktop with autologin as `vagrant`.
+On the first run, Vagrant downloads the base image, creates the VM, and runs all of provisioning (package install + XFCE setup). This takes a few minutes depending on your connection. The VM auto-reboots after provisioning and lands you in the XFCE desktop with autologin as `vagrant`.
+
+> On **Apple Silicon Macs** this uses UTM + Ubuntu 24.04 instead of VirtualBox + Debian 13 — see [docs/macos-apple-silicon.md](./docs/macos-apple-silicon.md).
 
 ### SSH into the VM
 

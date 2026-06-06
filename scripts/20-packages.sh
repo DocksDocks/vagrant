@@ -4,23 +4,18 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 # ── Manifesto de pacotes (compartilhados vs por-plataforma) ──
-# Para não confundir, mais tarde, o que é comum e o que é específico de
-# arquitetura, os pacotes ficam em listas nomeadas:
-#   COMMON_PKGS   — instalados em TODAS as arquiteturas. Debian main + repos
-#                   externos que publicam amd64 E arm64 (gh, code, docker).
-#   PLATFORM_PKGS — específicos da arquitetura (navegador + integração do
-#                   hypervisor):
-#                     • amd64 (VirtualBox): google-chrome-stable (sem build arm64)
-#                     • arm64 (UTM): chromium + agentes SPICE/QEMU (clipboard,
-#                       resize e shutdown limpo), já que os scripts VBox
-#                       30/50/51 são pulados nessa arch.
-#   PHP_PKGS      — PHP 8.4 versionado (nativo no Trixie; Sury no Bookworm; PPA
-#                   ondrej/php no Ubuntu — ver 10-apt-repos.sh). Fixa 8.4 mesmo
-#                   se o default da distro subir. Instalado aqui (antes do
-#                   Composer, que usa php).
-# O docklike-plugin é tratado à parte (só existe no Trixie+/Ubuntu, não no
-# Bookworm). O navegador depende da distro: Debian usa o pacote 'chromium';
-# Ubuntu usa 'chromium-browser' (snap).
+# Listas nomeadas para deixar claro o que é comum e o que é específico:
+#   COMMON_PKGS     — instalados em TODAS as plataformas. Debian/Ubuntu main +
+#                     repos externos que publicam amd64 E arm64 (gh, code, docker).
+#   PHP_PKGS        — PHP 8.4 versionado (nativo no Trixie; Sury no Bookworm; PPA
+#                     ondrej/php no Ubuntu — ver 10-apt-repos.sh). Fixa 8.4 mesmo
+#                     se o default da distro subir. Antes do Composer, que usa php.
+#   HYPERVISOR_PKGS — só arm64/UTM: agentes SPICE/QEMU (clipboard/resize/shutdown),
+#                     substituindo os scripts VBox 30/50/51 (pulados nessa arch).
+# O navegador e o docklike-plugin são instalados à parte:
+#   • Navegador: amd64 → google-chrome-stable; arm64 Debian → chromium (.deb);
+#     arm64 Ubuntu → chromium-browser (snap, instalação tolerante).
+#   • docklike: só existe no Trixie+/Ubuntu, não no Bookworm → instala se houver.
 ARCH=$(dpkg --print-architecture)
 # shellcheck source=/dev/null
 DISTRO_ID=$(. /etc/os-release && echo "$ID")
@@ -42,24 +37,32 @@ COMMON_PKGS="
 
 PHP_PKGS="php8.4-cli php8.4-common php8.4-curl php8.4-mbstring php8.4-xml php8.4-zip php8.4-bcmath php8.4-intl"
 
-# Navegador por distro: Debian → 'chromium' (.deb); Ubuntu → 'chromium-browser'
-# (transitional → snap; a imagem cloud do Ubuntu já traz o snapd semeado).
-if [ "$DISTRO_ID" = "ubuntu" ]; then BROWSER_PKG="chromium-browser"; else BROWSER_PKG="chromium"; fi
-case "$ARCH" in
-  amd64) PLATFORM_PKGS="google-chrome-stable" ;;
-  arm64) PLATFORM_PKGS="$BROWSER_PKG spice-vdagent qemu-guest-agent" ;;
-  *)     PLATFORM_PKGS="$BROWSER_PKG" ;;
-esac
+# Integração do hypervisor (só arm64/UTM): agentes SPICE/QEMU para clipboard,
+# resize e shutdown limpo — substituem os scripts VBox 30/50/51 (pulados).
+HYPERVISOR_PKGS=""
+[ "$ARCH" = "arm64" ] && HYPERVISOR_PKGS="spice-vdagent qemu-guest-agent"
 
+# Lote confiável (somente .debs): COMMON + PHP + agentes. O navegador fica FORA
+# daqui porque no Ubuntu o chromium é um snap, que pode falhar se o snapd ainda
+# não estiver pronto — não queremos que isso derrube a instalação inteira.
 echo ">> Instalando pacotes (COMMON + ${ARCH} + PHP 8.4)..."
 # shellcheck disable=SC2086  # word-splitting intencional das listas de pacotes
-apt-get install -y -qq $COMMON_PKGS $PLATFORM_PKGS $PHP_PKGS
+apt-get install -y -qq $COMMON_PKGS $PHP_PKGS $HYPERVISOR_PKGS
 
-# Dedup do repo do Chrome (só amd64): instalar google-chrome-stable solta um
-# deb822 (/etc/apt/sources.list.d/google-chrome.sources) que duplica o .list que
-# já mantemos em 10-apt-repos.sh — o apt avisa "configured multiple times" a cada
-# update. O Chrome não recria o arquivo, então removê-lo dedup-a o repo de vez.
-[ "$ARCH" = "amd64" ] && rm -f /etc/apt/sources.list.d/google-chrome.sources
+# ── Navegador (instalação isolada, por distro/arch) ─────
+# amd64 (VirtualBox): Google Chrome (+ dedup do deb822 duplicado que o .deb solta;
+#   nosso .list em 10-apt-repos.sh é o canônico).
+# arm64 Debian: chromium (.deb). arm64 Ubuntu: chromium-browser (snap) — tolerante,
+#   pois um snapd não-pronto não deve abortar todo o provisionamento.
+if [ "$ARCH" = "amd64" ]; then
+  apt-get install -y -qq google-chrome-stable
+  rm -f /etc/apt/sources.list.d/google-chrome.sources
+elif [ "$DISTRO_ID" = "ubuntu" ]; then
+  apt-get install -y -qq chromium-browser || \
+    echo "⚠ chromium-browser (snap) falhou — instale depois com: sudo snap install chromium"
+else
+  apt-get install -y -qq chromium
+fi
 
 # Dock opcional: o xfce4-docklike-plugin só entrou no Debian a partir do Trixie;
 # o Bookworm não o empacota. Instala se houver candidato; senão 40-xfce-base.sh
