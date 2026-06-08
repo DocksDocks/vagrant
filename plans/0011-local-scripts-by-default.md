@@ -43,6 +43,10 @@ fi
 
 `fetch_asset` (in `_lib.sh`) already mirrors this: it copies `/vagrant/assets/<rel>` when present and curls otherwise, so a partially-mounted share still resolves every asset. The net effect: a clone runs exactly the cloned code offline; a bare Vagrantfile still works from GitHub; and a broken share degrades to REMOTE per file instead of failing.
 
+### Line-ending safeguard (required for Windows)
+
+Running the on-disk copy makes the working tree's line endings load-bearing. Git for Windows defaults to `core.autocrlf=true`, so a clone there would convert `*.sh` (and the assets) to CRLF — and `bash /vagrant/scripts/NN.sh` then dies on the `\r` (`set: pipefail: invalid option name`), while a CRLF `_lib.sh` fails to source at all. The REMOTE path never had this problem because `raw.githubusercontent.com` always serves LF. A committed **`.gitattributes`** (`* text=auto eol=lf` plus explicit `*.sh`/`Vagrantfile`/asset rules) forces LF in the working tree on every host, neutralising the issue at the source (both scripts AND assets). A box cloned before `.gitattributes` existed can be repaired with `git add --renormalize . && git checkout -- .`, a re-clone, or `VAGRANT_SCRIPTS_DIR= vagrant provision` (force REMOTE).
+
 ## Alternatives considered
 
 | Option | Why rejected |
@@ -66,5 +70,6 @@ fi
 ## Files changed
 
 - `Vagrantfile` — `LOCAL_DIR` now auto-detects a clone (`ENV.key?` + `File.file?` on `scripts/_lib.sh`); the inline runner requires `/vagrant/scripts/<name>.sh` to exist before taking the LOCAL branch, else falls back to REMOTE; updated the surrounding comments.
-- `AGENTS.md` — architecture paragraph + UTM provider note updated to "local-by-default, remote fallback".
+- `.gitattributes` (new) — `* text=auto eol=lf` + explicit `*.sh`/`Vagrantfile`/asset rules, so Windows clones can't feed CRLF scripts to the guest now that LOCAL is the default.
+- `AGENTS.md` — architecture paragraph + UTM provider note updated to "local-by-default, remote fallback"; added the CRLF "Common Issues" entry.
 - `.agents/skills/vagrantfile-orchestrator/SKILL.md` — added the "Local-by-default script source" key decision; `metadata.updated` bumped.

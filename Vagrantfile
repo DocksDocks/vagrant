@@ -36,6 +36,26 @@ WINDOWS = !(HOST_OS =~ /mswin|mingw|cygwin/i).nil?
 is_mac_arm = RUBY_PLATFORM.include?("darwin") && RbConfig::CONFIG["host_cpu"].include?("arm64")
 ARM_BOX = ENV.fetch("VAGRANT_ARM_BOX", "utm/ubuntu-24.04")
 
+# ── Guarda de arquitetura suportada ─────────────────────
+# Este Vagrantfile só conhece dois caminhos: x86_64 (VirtualBox + bento/debian-13)
+# e macOS Apple Silicon (UTM + box arm64). Um host ARM que NÃO seja Mac — Linux
+# aarch64, Windows on ARM — cairia no ramo VirtualBox/amd64 e falharia de forma
+# obscura (o VirtualBox não roda uma box amd64 em ARM, e não há build aarch64 do
+# bento). Aborta cedo com orientação em vez de deixar o VBoxManage estourar.
+# (host_cpu: x86_64/x64 → não-ARM; arm64/aarch64 → ARM. Apple Silicon já é
+# tratado por is_mac_arm.)
+host_is_arm = !(RbConfig::CONFIG["host_cpu"] =~ /arm|aarch/i).nil?
+if host_is_arm && !is_mac_arm
+  abort(<<~MSG)
+
+    ✗ Host ARM não-Mac detectado (host_cpu=#{RbConfig::CONFIG["host_cpu"]}, os=#{HOST_OS}).
+      Este projeto suporta apenas:
+        • x86_64 (Windows / Linux / Intel Mac)  → VirtualBox + bento/debian-13
+        • macOS Apple Silicon (ARM64)           → UTM + utm/ubuntu-24.04
+      Linux ARM e Windows on ARM não têm provider/box livre suportado aqui.
+  MSG
+end
+
 def detect_host_memory_mb
   if HOST_OS =~ /darwin/i
     `sysctl -n hw.memsize`.to_i / 1024 / 1024
