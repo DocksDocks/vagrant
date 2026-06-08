@@ -17,7 +17,7 @@ metadata:
     - "assets/lightdm-gtk-greeter.conf"
     - "assets/xfce4-keyboard-shortcuts.xml"
     - "assets/xfce4-notifyd.xml"
-  updated: "2026-06-05"
+  updated: "2026-06-08"
 ---
 
 # XFCE Desktop Config

@@ -24,8 +24,11 @@ echo "  fzf        : $(fzf --version)"
 echo "  htop       : $(htop --version | head -1)"
 echo "  btop       : $(btop --version | head -1)"
 echo "  spf        : $(spf --version 2>&1 | head -1)"
+# Node toolchain banner — purely informational, so it must never abort finalize
+# (the reboot + sentinel below are the important part). `|| true` keeps a missing
+# nvm/node from tripping `set -e` and skipping the first-provision reboot.
 # shellcheck disable=SC2016  # $(...) intentionally evaluated inside vagrant's shell after nvm sources
-su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && echo "  node       : $(node --version)" && echo "  npm        : $(npm --version)" && echo "  pnpm       : $(pnpm --version)" && echo "  codex      : $(codex --version)"'
+su - vagrant -c 'source /home/vagrant/.nvm/nvm.sh && echo "  node       : $(node --version)" && echo "  npm        : $(npm --version)" && echo "  pnpm       : $(pnpm --version)" && echo "  codex      : $(codex --version)"' || true
 echo "══════════════════════════════════════════"
 echo ""
 echo "══════════════════════════════════════════"

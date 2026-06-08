@@ -16,6 +16,8 @@ Instale os dois programas abaixo **antes** de começar:
 
 > Ambos estão disponíveis para Windows, macOS e Linux. Após instalar, reinicie o terminal para garantir que os comandos `vagrant` e `VBoxManage` estejam no PATH.
 
+> **macOS Apple Silicon (M1/M2/M3/M4):** o VirtualBox não roda a box x86 no Apple Silicon — use **UTM** no lugar dele: `brew install --cask vagrant utm` e `vagrant plugin install vagrant_utm` (abra o UTM uma vez para o macOS conceder permissão). O Vagrantfile detecta o host e troca para **Ubuntu 24.04 LTS (arm64)** automaticamente; o tema Night Owl é só-Debian e fica de fora. Guia completo: [docs/macos-apple-silicon.md](./docs/macos-apple-silicon.md).
+
 ## O que vem instalado
 
 | Ferramenta       | Detalhes                                                        |
@@ -39,6 +41,7 @@ Instale os dois programas abaixo **antes** de começar:
 | **ripgrep**      | Busca ultrarrápida em código (`rg`)                             |
 | **build-essential** | gcc, make e headers — compilação de extensões nativas        |
 | **Tilix**        | Terminal com split panes (substitui tmux com GUI)                |
+| **VS Code**      | `code` (repo da Microsoft); tema Night Owl + settings/extensões  |
 | **fzf**          | Fuzzy finder para terminal                                      |
 | **bat**          | `cat` com syntax highlight (alias `bat` → `batcat`)             |
 | **fd-find**      | Busca rápida de arquivos (alias `fd` → `fdfind`)                |
@@ -47,38 +50,33 @@ Instale os dois programas abaixo **antes** de começar:
 | **direnv**       | Variáveis de ambiente por projeto                               |
 | **git-pull-all** | Atualiza todos os repos sob um diretório (`git pull-all` também) |
 
-## Recursos da VM (alocação dinâmica)
+## Recursos da VM (menu de perfis interativo)
 
-O Vagrantfile detecta automaticamente a RAM e os CPUs do host e aloca proporcionalmente:
+No `vagrant up`/`reload` num terminal interativo, o Vagrantfile detecta a RAM/CPUs do host e mostra um **menu de 5 perfis**. Navegue com ↑/↓ (ou `j`/`k`, ou tecle `1`–`5`), confirme com **Enter**, cancele com `q`/Esc. A escolha fica salva em `.vagrant/last_profile` e vem pré-selecionada na próxima vez.
 
-| Recurso | Regra                         | Mínimo | Máximo |
-|---------|-------------------------------|--------|--------|
-| RAM     | host − 6 GB reservado         | 2 GB   | 16 GB  |
-| CPUs    | host − 2 reservados           | 1      | 8      |
-| VRAM    | Fixo                          | 256 MB | 256 MB |
-| Desktop | XFCE 4 (via LightDM com autologin) | —  | —      |
+Todo perfil é **limitado a 75% da RAM e das CPUs do host**, e a RAM é sempre um **número inteiro de GB** — valores fracionários como 6,5 GB são instáveis no VirtualBox/UTM e podem impedir a VM de iniciar. Num host de 16 GB / 8 núcleos a escada é:
 
-A regra de reserva garante que o host sempre mantém ~6 GB de RAM e 2 CPUs livres para o sistema operacional e outros apps (ex.: Chrome no host), evitando congelamentos quando a VM está sob carga pesada.
+| Perfil | RAM   | vCPU | Observação  |
+|--------|-------|------|-------------|
+| 1      | 4 GB  | 4    |             |
+| 2      | 6 GB  | 5    | padrão      |
+| 3      | 8 GB  | 6    |             |
+| 4      | 10 GB | 6    |             |
+| 5      | 12 GB | 6    | = teto 75%  |
 
-Exemplos de como fica na prática:
+As mesmas porcentagens escalam para qualquer host (ex.: 32 GB / 16 núcleos → 8 / 12 / 16 / 20 / 24 GB; 8 GB / 4 núcleos → 2 / 3 / 4 / 5 / 6 GB). A VRAM é fixa em 256 MB (o teto do framebuffer VMSVGA — sem relação com a RAM do sistema).
 
-| Host         | VM recebe         |
-|--------------|-------------------|
-| 8 GB / 4 cores  | 2 GB RAM / 2 CPUs |
-| 16 GB / 8 cores | 6.5 GB RAM / 4 CPUs |
-| 32 GB / 12 cores | 16 GB RAM / 8 CPUs |
-| 64 GB / 16 cores | 16 GB RAM / 8 CPUs |
+- Execuções **não interativas** (CI, `vagrant ssh`/`status`/`provision`, stdin redirecionado) pulam o menu e usam o perfil lembrado, ou o perfil 2 por padrão.
+- **Pule o menu uma vez** com `VM_PROFILE=1..5 vagrant up` (não altera a escolha salva).
 
-O tier 16 GB / 8 CPUs é um caso especial — alocar 10 GB para a VM deixava o host sufocado (Chrome, Claude Code e outros apps competindo por ~6 GB). A carve-out reserva mais RAM/CPU pro host.
-
-Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando `vm_memory` e `vm_cpus` diretamente no topo do `Vagrantfile`.
+Funciona em Windows, macOS e Linux — o menu lê as setas inclusive no console clássico do Windows.
 
 ## Extras configurados automaticamente
 
 - **Desktop XFCE** com autologin — ao rodar `vagrant up`, a janela do VirtualBox abre direto no desktop sem pedir senha.
 - **Painel único inferior** — whiskermenu (esquerda), dock centralizado com Docklike (ícones de apps fixos que também mostram janelas abertas, como o dock do Ubuntu), systray e relógio (direita). Sem barra superior.
-- **Dock com apps fixos** — Chrome, Thunar, Tilix e Mousepad prontos para uso com um clique. Apps abertos aparecem no mesmo ícone.
-- **Tema Arc-Dark** + ícones **Papirus-Dark** + fonte **Noto Sans** + cursor **DMZ-White** — visual moderno e limpo em dark mode. Compositor desabilitado para compatibilidade com VirtualBox.
+- **Dock com apps fixos** — Chrome, Thunar, Tilix e VS Code prontos para uso com um clique. Apps abertos aparecem no mesmo ícone.
+- **Tema Tokyo Night** (`Tokyonight-Dark`, o navy mantido mais próximo do Night Owl) + ícones **Papirus-Dark** + fonte **Noto Sans** + cursor **DMZ-White** — visual moderno e limpo em dark mode. Compositor habilitado sob VMSVGA.
 - **Capturas de tela estilo Ubuntu** — aperte **PrtSc** para selecionar uma região arrastando; ela é salva automaticamente em `~/Pictures/Screenshots` e copiada para a área de transferência de uma vez, sem diálogo de escolha ou de salvar. (Shift+PrtSc ainda faz captura de região com o diálogo de salvar; Alt+PrtSc captura a janela ativa.)
 - **Downloads e Pictures fixados** na barra lateral do Thunar (Locais do gerenciador de arquivos).
 - **Clipboard e drag-and-drop** bidirecional entre host e VM.
@@ -90,7 +88,7 @@ Funciona em Windows, macOS e Linux. Você pode sobrescrever os valores editando 
 - **Docker sem sudo** — o usuário `vagrant` já está no grupo `docker`.
 - **direnv** — hook ativado no `.bashrc` para carregar `.envrc` automaticamente.
 - **Tilix** com 4% de transparência como terminal padrão no dock.
-- **Mousepad** com tema Solarized Dark e números de linha ativados.
+- **VS Code** com tema Night Owl e ícones Material; o `settings.json` e a lista de extensões do mantenedor são semeados no primeiro provisionamento (suas edições dentro da VM são preservadas ao reprovisionar). O login do GitHub (Settings Sync) persiste entre reloads (`password-store: basic`).
 - **Áudio habilitado** — saída de som via Intel HD Audio (sem microfone).
 - **Senha** do usuário `vagrant`: `vagrant` (definida apenas no primeiro provisionamento; troque à vontade depois — reprovisionar não redefine).
 - **Git config** — `init.defaultBranch` definido como `main`. Lembre-se de configurar `user.name` e `user.email`.
@@ -178,8 +176,10 @@ Depois rode `vagrant reload` para aplicar.
 ```
 .
 ├── Vagrantfile     # host detection, VM config, registers per-concern provisioners
-├── scripts/        # numbered shell scripts, fetched from GitHub at provision time
+├── scripts/        # numbered shell scripts, run from the clone (or fetched from GitHub)
+│   ├── _lib.sh     # shared helpers (fetch_asset)
 │   ├── 10-apt-repos.sh
+│   ├── 15-grub-quickboot.sh
 │   ├── 20-packages.sh
 │   ├── 30-guest-additions.sh
 │   ├── 40-xfce-base.sh
@@ -187,12 +187,15 @@ Depois rode `vagrant reload` para aplicar.
 │   ├── 45-desktop-extras.sh
 │   ├── 50-vboxclient-supervisor.sh
 │   ├── 51-vbox-autoresize.sh
-│   ├── 60-apps-tilix-mousepad.sh
+│   ├── 55-permissions.sh
+│   ├── 60-tilix.sh
 │   ├── 65-superfile-fonts.sh
+│   ├── 66-vscode.sh
 │   ├── 70-nodejs-claude.sh
 │   ├── 80-git-ssh.sh
 │   ├── 85-secrets-env.sh
-│   └── 90-claude-config-sync.sh
+│   ├── 90-claude-config-sync.sh
+│   └── 99-finalize.sh
 ├── assets/         # XFCE/Tilix/Chrome configs, systemd units, helper scripts
 ├── plans/          # design docs (clipboard supervisor, Vagrantfile split)
 ├── CLAUDE.md       # Contexto técnico para sessões Claude Code

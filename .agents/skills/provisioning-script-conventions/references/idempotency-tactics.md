@@ -49,7 +49,7 @@ fi
 
 Source: `scripts/85-secrets-env.sh:50-55`
 
-The marker string MUST be unique per script (use the script's filename in a comment). Scripts using this pattern: `scripts/80-git-ssh.sh:24-30`, `scripts/85-secrets-env.sh:50`, `scripts/60-apps-tilix-mousepad.sh:74`, `scripts/70-nodejs-claude.sh:45`.
+The marker string MUST be unique per script (use the script's filename in a comment). Scripts using this pattern: `scripts/80-git-ssh.sh:24-30`, `scripts/85-secrets-env.sh:50`, `scripts/60-tilix.sh:75`, `scripts/70-nodejs-claude.sh:60`.
 
 ### 3. File-existence guard for one-time scaffolding
 

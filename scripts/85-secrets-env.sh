@@ -25,11 +25,13 @@ USER_HOME=/home/vagrant
 SECRETS_FILE="$USER_HOME/.config/secrets.env"
 BASHRC="$USER_HOME/.bashrc"
 
-# 1. Placeholder file (don't clobber an existing one). Ownership is set by
-# scripts/55-permissions.sh; mode 0600 must be set here so the file is locked
-# down from the moment it exists, regardless of when 95- runs.
+# 1. Placeholder file (don't clobber an existing one). This script runs AFTER
+# 55-permissions.sh, so it can't lean on that sweep to fix ownership — it must
+# create the file owned by vagrant itself. A root-owned 0600 secrets.env would
+# be unreadable by vagrant, so the `[ -r … ]` guard in ~/.bashrc (step 2) would
+# silently skip it and the secrets would never load. Own it to vagrant + 0600.
 if [[ ! -e "$SECRETS_FILE" ]]; then
-  install -d -m 0700 "$USER_HOME/.config"
+  install -d -o vagrant -g vagrant -m 0700 "$USER_HOME/.config"
   cat > "$SECRETS_FILE" <<'EOF'
 # secrets.env — sourced from ~/.bashrc (managed by 85-secrets-env.sh).
 #
@@ -41,12 +43,13 @@ if [[ ! -e "$SECRETS_FILE" ]]; then
 #
 # Keep this file out of any dotfile sync or backup that targets ~/.bashrc.
 EOF
+  chown vagrant:vagrant "$SECRETS_FILE"
   chmod 0600 "$SECRETS_FILE"
 fi
 
 # 2. Idempotent source-line append to ~/.bashrc. The marker is the script
 # filename in the comment — uniquely identifies our block on re-provision.
-# Ownership is corrected in scripts/55-permissions.sh.
+# Appending with `cat >>` preserves ~/.bashrc's existing owner (vagrant).
 if ! grep -qF '85-secrets-env.sh' "$BASHRC" 2>/dev/null; then
   cat >> "$BASHRC" <<'BASHRC_SECRETS'
 

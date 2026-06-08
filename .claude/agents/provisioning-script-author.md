@@ -8,7 +8,7 @@ description: >
   DEBIAN_FRONTEND=noninteractive / VAGRANT_LIB_PATH-source preamble, adding an
   idempotent ~/.bashrc append guarded by a grep -qF marker, gating a heavy
   install behind FORCE_REINSTALL, writing XFCE xfconf XML channel files,
-  applying dconf compile for Tilix/Mousepad settings without a D-Bus session,
+  applying dconf compile for Tilix settings without a D-Bus session,
   or running a curl-fetched installer as root with SHA-384 verification. Not
   for diagnosing VirtualBox VMSVGA / clipboard / Chrome runtime symptoms (use
   vbox-gotcha-doctor), authoring ADRs under plans/ (use adr-author), or
@@ -66,7 +66,7 @@ Use `dconf compile OUTPUT KEYFILEDIR` for all GTK/dconf settings — NOT
 `dconf load`, NOT `gsettings set`, NOT `dbus-run-session`. Provisioning has no
 D-Bus session bus. `dconf compile` replaces the entire dconf database — do NOT
 add `|| true` to this call.
-Source: `scripts/60-apps-tilix-mousepad.sh:12-62`.
+Source: `scripts/60-tilix.sh:12-63`.
 </constraint>
 
 <constraint>
@@ -162,7 +162,7 @@ fi
 ```
 
 ```bash
-# dconf compile (no D-Bus) — scripts/60-apps-tilix-mousepad.sh:53-62
+# dconf compile (no D-Bus) — scripts/60-tilix.sh:48-60
 sed -e 's|^\[/\]$|[com/gexperts/Tilix]|' \
     -e 's|^\[\(profiles/[^]]*\)\]$|[com/gexperts/Tilix/\1]|' \
     /tmp/tilix.dconf > "$KEYFILES_DIR/10-tilix"
