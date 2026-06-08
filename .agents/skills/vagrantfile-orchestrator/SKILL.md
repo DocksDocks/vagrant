@@ -9,7 +9,9 @@ metadata:
     - "plans/0002-split-vagrantfile.md"
     - "plans/0005-windows-console-arrow-keys.md"
     - "plans/0009-multi-platform-arm64.md"
-  updated: "2026-06-06"
+    - "plans/0010-resource-profile-whole-gb.md"
+    - "plans/0011-local-scripts-by-default.md"
+  updated: "2026-06-08"
 ---
 
 # Vagrantfile Orchestrator
@@ -70,6 +72,7 @@ Setting `VAGRANT_SCRIPTS_DIR=./scripts` (host-side env) switches every script an
 ```ruby
 SCRIPTS = %w[
   10-apt-repos
+  15-grub-quickboot
   20-packages
   30-guest-additions
   40-xfce-base
@@ -78,8 +81,9 @@ SCRIPTS = %w[
   50-vboxclient-supervisor
   51-vbox-autoresize
   55-permissions
-  60-apps-tilix-mousepad
+  60-tilix
   65-superfile-fonts
+  66-vscode
   70-nodejs-claude
   80-git-ssh
   85-secrets-env
@@ -144,10 +148,11 @@ Source: `Vagrantfile:132-135` (inline runner, before script execution). bento/de
 ## Key Decisions
 
 - **`SCRIPTS` array = single ordering authority**: Vagrant executes in declaration order; numeric prefixes are cosmetic. Source: `plans/0002-split-vagrantfile.md:44`.
-- **Ref pinning via `VAGRANT_SCRIPTS_REF`**: defaults to `main`; pin to a tag (`v1.0.0`) for reproducible production boxes. Source: `Vagrantfile:69`.
+- **Ref pinning via `VAGRANT_SCRIPTS_REF`**: defaults to `main`; pin to a tag (`v1.0.0`) for reproducible production boxes (REMOTE mode only). Source: `Vagrantfile`.
+- **Local-by-default script source**: `LOCAL_DIR` auto-selects LOCAL mode when `scripts/_lib.sh` sits next to the Vagrantfile (i.e. a clone), so `git clone … && vagrant up` runs the EXACT cloned code (even on a feature branch), offline, with no `main`-vs-branch surprise. `VAGRANT_SCRIPTS_DIR` overrides verbatim (empty `""` forces REMOTE). The inline runner falls back to REMOTE per-script if `/vagrant/scripts/<name>.sh` isn't mounted, so LOCAL is always safe to prefer. Source: `plans/0011-local-scripts-by-default.md`.
 - **`_lib.sh` cached at `/tmp/`**: avoids 15 separate network fetches per provision run; all scripts share the same download. Source: `Vagrantfile:150-155`.
 - **`bento/debian-13` is the only valid base box**: libvirt-only and Forky-tracking alternatives are both broken for different reasons. Source: `Vagrantfile:91`.
-- **Interactive 5-tier resource profile**: `build_profiles` (`Vagrantfile:69-79`) scales RAM/CPU off `RAM_TIER_PCT`/`CPU_TIER_PCT` (`Vagrantfile:61-62`), each tier rounded to 256 MB and clamped to 75% of host RAM/CPU. `DEFAULT_TIER = 2` (`Vagrantfile:63`) is 6.5 GB / 5 vCPU on a 16 GB / 8-core host. The tier math (percentages, 256 MB rounding, 75% cap, `DEFAULT_TIER`) is unchanged from the original numbered-prompt version.
+- **Interactive 5-tier resource profile**: `build_profiles` scales RAM/CPU off `RAM_TIER_PCT = [0.25, 0.375, 0.5, 0.625, 0.75]` / `CPU_TIER_PCT`, each RAM tier rounded to **whole GB** (`/ GB` where `GB = 1024`) and clamped to `[2 GB, cap]` with `cap = 75% of host RAM floored to a whole GB`. `DEFAULT_TIER = 2` is **6 GB / 5 vCPU** on a 16 GB / 8-core host; the canonical ladder there is **4 / 6 / 8 / 10 / 12 GB**. RAM is whole-GB on purpose: VirtualBox's real granularity is 4 MB, but fractional sizes (the old 256-MB rounding produced e.g. 6.5 GB) are flaky and "odd CPU/RAM combos" can block VM start (VBox #11483). The 256 was a confusion with the 256 MB **VRAM** ceiling (`--vram 256`), which does not apply to system RAM. Source: `plans/0010-resource-profile-whole-gb.md`.
 - **Arrow-key menu + persistence**: an interactive `up`/`reload` opens an alternate-screen arrow-key TUI (`interactive_profile_menu`, `render_profile_menu`, `run_menu_loop`). Key reading is **host-aware** (plans/0005): Unix decodes the `read_nonblock` ANSI burst (`decode_unix_burst`/`next_action_unix`), Windows decodes `$stdin.getch` extended-key scancodes (`decode_win_getch`/`next_action_windows`) because a classic Windows console delivers ↑/↓ only via `getch` as a `0x00`/`0xE0`+scancode pair, never to `read_nonblock`. ↑/↓ or `j`/`k` (wrap-around) or `1-5`, Enter confirms, `q`/Esc/Ctrl-C cancels (→ `abort`, exit 1, VM not started). `select_profile` (`Vagrantfile:155-194`) resolves the tier as **`VM_PROFILE` env (one-shot, does NOT persist) → saved `.vagrant/last_profile` → `DEFAULT_TIER`**; `load_saved_tier`/`save_tier` (`Vagrantfile:81-95`) read/write the index via `PROFILE_STATE_FILE` (`Vagrantfile:67`), and the saved tier is the pre-selected cursor row plus the silent fallback for non-tty runs. Raw-mode failure rescues `StandardError` → silent default fallback (never aborts). Source: `Vagrantfile:5-7,61-196`.
 
 ## Gotchas

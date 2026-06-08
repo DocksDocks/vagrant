@@ -2,9 +2,14 @@
 
 <constraint>
 Every resolved tier MUST stay ≤75% of host RAM and ≤75% of host CPUs
-(`ram_cap`/`cpu_cap`), and RAM MUST be a multiple of 256 MB (VMSVGA framebuffer
-alignment). Without the 75% cap a high tier on a small host starves host
-Chrome/Claude; without the 256 MB rounding VirtualBox silently clamps the value.
+(`ram_cap_gb`/`cpu_cap`), and RAM MUST be a whole number of GB (a multiple of
+1024 MB). Without the 75% cap a high tier on a small host starves host
+Chrome/Claude; without whole-GB rounding the picker can hand VirtualBox/UTM
+fractional sizes like 6.5 GB, which are flaky in practice (VBox's real
+granularity is 4 MB, and odd CPU/RAM combos can block VM start — VBox #11483).
+NOTE: the 256 MB figure that lived here was the **VRAM** framebuffer ceiling
+(`--vram 256`); it never applied to system RAM. See
+plans/0010-resource-profile-whole-gb.md.
 </constraint>
 
 ## Host detection
@@ -19,30 +24,32 @@ def detect_host_cpus        # darwin: hw.ncpu; linux: nproc;
 Source: `Vagrantfile:14-36`. `detect_audio_driver` (`Vagrantfile:38-48`) maps
 OS → audio driver; unchanged by the profile rework.
 
-## 5-tier resource profile (math unchanged)
+## 5-tier resource profile (whole-GB)
 
 ```ruby
-RAM_TIER_PCT = [0.3125, 0.40625, 0.5, 0.59375, 0.6875].freeze
+GB = 1024
+RAM_TIER_PCT = [0.25, 0.375, 0.5, 0.625, 0.75].freeze
 CPU_TIER_PCT = [0.5, 0.625, 0.75, 0.75, 0.75].freeze
-DEFAULT_TIER = 2  # base-1; 6.5 GB / 5 vCPU on a 16 GB / 8-core host
+DEFAULT_TIER = 2  # base-1; 6 GB / 5 vCPU on a 16 GB / 8-core host
 
 def build_profiles(host_ram, host_cpus)
-  ram_cap = (host_ram  * 0.75).floor
-  cpu_cap = [(host_cpus * 0.75).floor, 1].max
+  ram_cap_gb = [(host_ram * 0.75 / GB).floor, 1].max
+  cpu_cap    = [(host_cpus * 0.75).floor, 1].max
   RAM_TIER_PCT.each_index.map do |i|
-    mem = (host_ram * RAM_TIER_PCT[i] / 256).round * 256
-    mem = [[mem, 2048].max, ram_cap].min
+    gb  = (host_ram * RAM_TIER_PCT[i] / GB).round
+    gb  = [[gb, 2].max, ram_cap_gb].min
     cpu = [[(host_cpus * CPU_TIER_PCT[i]).round, 1].max, cpu_cap].min
-    [mem, cpu]
+    [gb * GB, cpu]
   end
 end
 ```
 
-Source: `RAM_TIER_PCT`/`CPU_TIER_PCT`/`DEFAULT_TIER` at `Vagrantfile:61-63`,
-`build_profiles` at `Vagrantfile:69-79`. Each tier scales off host totals, rounds
-RAM to 256 MB, then clamps RAM to `[2048, ram_cap]` and CPU to `[1, cpu_cap]`
-(caps = 75% of host, floored). These percentages, the rounding, the 75% cap, and
-`DEFAULT_TIER` are unchanged from the original numbered-prompt version.
+Source: `GB`/`RAM_TIER_PCT`/`CPU_TIER_PCT`/`DEFAULT_TIER` and `build_profiles` in
+the Vagrantfile. Each tier scales off host totals, rounds RAM to a **whole GB**,
+then clamps the GB count to `[2, ram_cap_gb]` and CPU to `[1, cpu_cap]` (caps =
+75% of host; the RAM cap is also floored to a whole GB, min 1 GB). Every emitted
+RAM value is therefore an exact multiple of 1024 MB. The even-step percentages
+land the 16 GB reference host on a clean `4 / 6 / 8 / 10 / 12 GB` ladder.
 
 ## Persistence (`.vagrant/last_profile`)
 
@@ -101,10 +108,14 @@ interactive_profile_menu(...)   # :207-225 branches on WINDOWS
 
 | Host | Cap (75%) | T1 | T2 (default) | T3 | T4 | T5 |
 |---|---|---|---|---|---|---|
-| 16 GB / 8 CPU | 12288 MB / 6 | 5.0 GB / 4 | 6.5 GB / 5 | 8.0 GB / 6 | 9.5 GB / 6 | 11.0 GB / 6 |
-| 8 GB / 4 CPU | 6144 MB / 3 | 2.5 GB / 2 | 3.2 GB / 3 | 4.0 GB / 3 | 4.8 GB / 3 | 5.5 GB / 3 |
-| 32 GB / 16 CPU | 24576 MB / 12 | 10 GB / 8 | 13 GB / 10 | 16 GB / 12 | 19 GB / 12 | 22 GB / 12 |
-| Unknown OS | — | falls back to 8192 MB / 2 CPU host defaults, then tiered |
+| 16 GB / 8 CPU | 12 GB / 6 | 4 GB / 4 | 6 GB / 5 | 8 GB / 6 | 10 GB / 6 | 12 GB / 6 |
+| 8 GB / 4 CPU | 6 GB / 3 | 2 GB / 2 | 3 GB / 3 | 4 GB / 3 | 5 GB / 3 | 6 GB / 3 |
+| 32 GB / 16 CPU | 24 GB / 12 | 8 GB / 8 | 12 GB / 10 | 16 GB / 12 | 20 GB / 12 | 24 GB / 12 |
+| Unknown OS | — | falls back to 8192 MB / 2 CPU host defaults, then tiered (2/3/4/5/6 GB / 1 CPU) |
+
+All RAM values are exact multiples of 1024 MB. Tiers may repeat at the top on
+small hosts when the 75% cap binds (e.g. a 16 GB host caps T5 at 12 GB; a host
+reporting slightly under 16 GB caps T5 at 11 GB).
 
 CPU tiers 3-5 share `CPU_TIER_PCT = 0.75`, so they resolve to the same vCPU count
 (capped at the host's own 75%); only RAM keeps climbing across tiers 3-5.
@@ -127,8 +138,9 @@ raising the tier past 3 only adds RAM. On a 16 GB / 8-core host every tier from 
 up is 6 vCPU.
 
 **`detect_host_memory_mb` returns 0 on broken Linux**: if `/proc/meminfo` is
-missing, `ram_cap` becomes 0 and every tier clamps to 0 MB — guard host detection
-on non-standard Linux.
+missing, `ram_cap_gb` floors to `max(0, 1) = 1`, so every tier clamps to 1 GB
+(a barely-bootable VM) rather than the old 0 MB — still worth guarding host
+detection on non-standard Linux.
 
 **`VM_PROFILE` out of range**: `VM_PROFILE=9`/`0`/non-numeric falls back to the
 saved tier or `DEFAULT_TIER` rather than erroring, and never writes the state file.

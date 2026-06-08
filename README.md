@@ -54,6 +54,7 @@ You get **Ubuntu 24.04 LTS (arm64)** with a functional XFCE desktop (the Night O
 | **ripgrep**      | Ultra-fast code search (`rg`)                                    |
 | **build-essential** | gcc, make, headers — native extension compilation             |
 | **Tilix**        | Split-pane terminal (replaces tmux with a GUI)                   |
+| **VS Code**      | `code` (Microsoft repo); Night Owl theme + settings/extensions seeded |
 | **fzf**          | Fuzzy finder for the terminal                                    |
 | **bat**          | `cat` with syntax highlighting (alias `bat` → `batcat`)          |
 | **fd-find**      | Fast file finder (alias `fd` → `fdfind`)                         |
@@ -63,38 +64,33 @@ You get **Ubuntu 24.04 LTS (arm64)** with a functional XFCE desktop (the Night O
 | **git-pull-all** | Bulk-update every repo under a dir (`git pull-all` works too)     |
 | **superfile**    | TUI file manager (`spf`) with Nerd Font icons                    |
 
-## VM resources (dynamic allocation)
+## VM resources (interactive profile menu)
 
-The Vagrantfile auto-detects host RAM and CPUs and allocates proportionally:
+On `vagrant up`/`reload` in an interactive terminal, the Vagrantfile detects host RAM/CPUs and shows a **5-tier resource menu**. Move with ↑/↓ (or `j`/`k`, or press `1`–`5`), confirm with **Enter**, cancel with `q`/Esc. Your choice is remembered in `.vagrant/last_profile` and pre-selected next time.
 
-| Resource | Rule                          | Min    | Max    |
-|----------|-------------------------------|--------|--------|
-| RAM      | host − 6 GB reserved          | 2 GB   | 16 GB  |
-| CPUs     | host − 2 reserved             | 1      | 8      |
-| VRAM     | Fixed                         | 256 MB | 256 MB |
-| Desktop  | XFCE 4 (via LightDM autologin) | —     | —      |
+Every tier is **capped at 75% of host RAM and CPUs**, and RAM is always a **whole number of GB** — fractional sizes like 6.5 GB are flaky on VirtualBox/UTM and can keep the VM from starting. On a 16 GB / 8-core host the ladder is:
 
-The reservation rule keeps ~6 GB of RAM and 2 CPUs free on the host for the OS and other apps (e.g. Chrome on the host), avoiding freezes when the VM is under heavy load.
+| Tier | RAM   | vCPU | Notes      |
+|------|-------|------|------------|
+| 1    | 4 GB  | 4    |            |
+| 2    | 6 GB  | 5    | default    |
+| 3    | 8 GB  | 6    |            |
+| 4    | 10 GB | 6    |            |
+| 5    | 12 GB | 6    | = 75% cap  |
 
-Examples in practice:
+The same percentages scale to any host (e.g. 32 GB / 16 cores → 8 / 12 / 16 / 20 / 24 GB; 8 GB / 4 cores → 2 / 3 / 4 / 5 / 6 GB). VRAM is fixed at 256 MB (the VMSVGA framebuffer ceiling — unrelated to system RAM).
 
-| Host             | VM gets             |
-|------------------|---------------------|
-| 8 GB / 4 cores   | 2 GB RAM / 2 CPUs   |
-| 16 GB / 8 cores  | 6.5 GB RAM / 4 CPUs |
-| 32 GB / 12 cores | 16 GB RAM / 8 CPUs  |
-| 64 GB / 16 cores | 16 GB RAM / 8 CPUs  |
+- **Non-interactive** runs (CI, `vagrant ssh`/`status`/`provision`, piped stdin) skip the menu and use the remembered tier, or tier 2 by default.
+- **Skip the menu once** with `VM_PROFILE=1..5 vagrant up` (doesn't change the saved choice).
 
-The 16 GB / 8-core tier is a special case — allocating 10 GB to the VM left the host suffocated (Chrome, Claude Code, and other apps competing for ~6 GB). The carve-out reserves more RAM/CPU for the host.
-
-Works on Windows, macOS, and Linux. You can override the values by editing `vm_memory` and `vm_cpus` near the top of the `Vagrantfile`.
+Works on Windows, macOS, and Linux — the menu reads arrow keys on the classic Windows console too.
 
 ## Extras configured automatically
 
 - **XFCE desktop** with autologin — `vagrant up` opens directly to the desktop, no password prompt.
 - **Single bottom panel** — whiskermenu (left), centered dock with Docklike (pinned app icons that also show open windows, like Ubuntu's dock), systray and clock (right). No top bar.
-- **Pinned dock apps** — Chrome, Thunar, Tilix, Mousepad ready with one click. Open apps merge into their dock icon.
-- **Arc-Dark theme** + **Papirus-Dark icons** + **Noto Sans font** + **DMZ-White cursor** — a clean modern dark look. Compositor enabled under VMSVGA.
+- **Pinned dock apps** — Chrome, Thunar, Tilix, VS Code ready with one click. Open apps merge into their dock icon.
+- **Tokyo Night GTK theme** (`Tokyonight-Dark`, the closest maintained navy match to Night Owl) + **Papirus-Dark icons** + **Noto Sans font** + **DMZ-White cursor** — a clean modern dark look. Compositor enabled under VMSVGA.
 - **Ubuntu-style screenshots** — press **PrtSc** to drag-select a region; it's auto-saved to `~/Pictures/Screenshots` and copied to the clipboard in one go, no chooser or save dialog. (Shift+PrtSc still does a region capture with the save dialog; Alt+PrtSc grabs the active window.)
 - **Downloads and Pictures pinned** in the Thunar sidebar (file-manager Places).
 - **Bidirectional clipboard and drag-and-drop** between host and VM (supervised systemd user units; survives X-event storms).
@@ -106,7 +102,7 @@ Works on Windows, macOS, and Linux. You can override the values by editing `vm_m
 - **Docker without sudo** — the `vagrant` user is in the `docker` group.
 - **direnv** — hook installed in `.bashrc` so `.envrc` files load automatically.
 - **Tilix** with 4% transparency as the default dock terminal.
-- **Mousepad** with the Solarized Dark scheme and line numbers enabled.
+- **VS Code** with the Night Owl theme and Material icons; the maintainer's `settings.json` and extension set are seeded on the first provision (your in-VM edits are preserved on re-provision). The GitHub Settings-Sync sign-in persists across reloads (`password-store: basic`).
 - **Audio enabled** — output via Intel HD Audio (no microphone).
 - **`vagrant` user password**: `vagrant` (set on the first provision only; change it freely afterward — re-provisioning won't reset it).
 - **Git config** — `init.defaultBranch=main`. The placeholder `user.name` / `user.email` are only set if you haven't configured your own — re-running `vagrant provision` won't overwrite your real identity.
@@ -203,7 +199,7 @@ Then run `vagrant reload` to apply.
 ```
 .
 ├── Vagrantfile         # host detection, VM config, registers per-concern provisioners
-├── scripts/            # numbered shell scripts, fetched from GitHub at provision time
+├── scripts/            # numbered shell scripts, run from the clone (or fetched from GitHub)
 │   ├── _lib.sh         # shared helpers (fetch_asset)
 │   ├── 10-apt-repos.sh
 │   ├── 15-grub-quickboot.sh
@@ -215,8 +211,9 @@ Then run `vagrant reload` to apply.
 │   ├── 50-vboxclient-supervisor.sh
 │   ├── 51-vbox-autoresize.sh
 │   ├── 55-permissions.sh
-│   ├── 60-apps-tilix-mousepad.sh
+│   ├── 60-tilix.sh
 │   ├── 65-superfile-fonts.sh
+│   ├── 66-vscode.sh
 │   ├── 70-nodejs-claude.sh
 │   ├── 80-git-ssh.sh
 │   ├── 85-secrets-env.sh

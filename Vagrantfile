@@ -79,26 +79,39 @@ host_cpus = detect_host_cpus
 # Cinco níveis escalados a partir de uma referência de 16 GB / 8 núcleos,
 # cada um limitado a 75% da RAM e das CPUs do host. Num host 16 GB / 8 CPU
 # resolvem para a escada canônica:
-#   5.0 / 6.5 / 8.0 / 9.5 / 11.0 GB   e   4 / 5 / 6 / 6 / 6 vCPU
+#   4 / 6 / 8 / 10 / 12 GB   e   4 / 5 / 6 / 6 / 6 vCPU
 # `vagrant up`/`reload` interativo abre o menu de setas; fora disso (status,
 # ssh, provision, CI, stdin não-tty) usa o nível lembrado/padrão em silêncio.
 # Pule o menu com VM_PROFILE=1..5 (one-shot; não altera a escolha lembrada).
-RAM_TIER_PCT = [0.3125, 0.40625, 0.5, 0.59375, 0.6875].freeze
+#
+# RAM sempre em GB INTEIROS. A granularidade real de memória do VirtualBox é
+# 4 MB, mas tamanhos "redondos" (múltiplos de 1 GB) são os testados/usados na
+# prática: valores fracionários como 6,5 GB já se mostraram instáveis em alguns
+# builds e há "combinações estranhas de CPU/RAM" que impedem a VM de iniciar
+# (Oracle VBox #11483). O arredondamento antigo para 256 MB confundia o teto de
+# VRAM/framebuffer (256 MB, este sim relevante — `--vram 256`) com a RAM do
+# sistema, que não tem esse limite. Ver plans/0010-resource-profile-whole-gb.md.
+GB = 1024
+RAM_TIER_PCT = [0.25, 0.375, 0.5, 0.625, 0.75].freeze
 CPU_TIER_PCT = [0.5, 0.625, 0.75, 0.75, 0.75].freeze
-DEFAULT_TIER = 2  # base-1; 6.5 GB / 5 vCPU num host de 16 GB / 8 núcleos
+DEFAULT_TIER = 2  # base-1; 6 GB / 5 vCPU num host de 16 GB / 8 núcleos
 
 # Estado persistente da última escolha (índice 1-5). Fica em .vagrant/
 # (estado local da máquina, fora do git) e é pré-selecionado no próximo up.
 PROFILE_STATE_FILE = File.join(File.dirname(File.expand_path(__FILE__)), ".vagrant", "last_profile")
 
+# Constrói os 5 perfis [mem_mb, cpus]. A RAM é arredondada para GB inteiros e
+# presa em [2 GB, teto]; o teto = 75% da RAM do host arredondado PARA BAIXO em
+# GB inteiros (e ao menos 1 GB, p/ hosts minúsculos onde 75% < 2 GB). Assim
+# nenhum perfil passa de 75% do host e todo valor é múltiplo exato de 1 GB.
 def build_profiles(host_ram, host_cpus)
-  ram_cap = (host_ram  * 0.75).floor
-  cpu_cap = [(host_cpus * 0.75).floor, 1].max
+  ram_cap_gb = [(host_ram * 0.75 / GB).floor, 1].max
+  cpu_cap    = [(host_cpus * 0.75).floor, 1].max
   RAM_TIER_PCT.each_index.map do |i|
-    mem = (host_ram * RAM_TIER_PCT[i] / 256).round * 256
-    mem = [[mem, 2048].max, ram_cap].min
+    gb  = (host_ram * RAM_TIER_PCT[i] / GB).round
+    gb  = [[gb, 2].max, ram_cap_gb].min
     cpu = [[(host_cpus * CPU_TIER_PCT[i]).round, 1].max, cpu_cap].min
-    [mem, cpu]
+    [gb * GB, cpu]
   end
 end
 
@@ -135,7 +148,7 @@ def render_profile_menu(profiles, host_ram, host_cpus, cursor, saved_idx)
     tags << "padrão" if i + 1 == DEFAULT_TIER
     tags << "último" if i + 1 == saved_idx
     ann  = tags.empty? ? "" : "  (#{tags.join(' · ')})"
-    text = format(" %5.1f GB   /  %d vCPU%s", mem / 1024.0, cpu, ann)
+    text = format(" %4d GB   /  %d vCPU%s", mem / GB, cpu, ann)
     lines << (i == cursor ? "  \e[1;97;44m ❯#{text.ljust(36)}\e[0m" : "    #{text}")
   end
   lines << ""
@@ -280,7 +293,7 @@ def select_profile(profiles, host_ram, host_cpus)
   when Integer
     save_tier(choice)
     mem, cpu = profiles[choice - 1]
-    $stdout.printf("  → perfil: %.1f GB / %d vCPU\n\n", mem / 1024.0, cpu)
+    $stdout.printf("  → perfil: %d GB / %d vCPU\n\n", mem / GB, cpu)
     $vm_profile = [mem, cpu]
   when :cancel
     abort("\n  Cancelado — a VM não foi iniciada.\n")
@@ -292,14 +305,28 @@ end
 vm_memory, vm_cpus = select_profile(build_profiles(host_ram, host_cpus), host_ram, host_cpus)
 
 # ── Provisioning source config ──────────────────────────
-# Scripts live in this repo under scripts/ and assets/. At provision time
-# the Vagrantfile fetches them from raw.githubusercontent.com at $SCRIPTS_REF
-# (overridable via VAGRANT_SCRIPTS_REF). For local development, set
-# VAGRANT_SCRIPTS_DIR=./scripts to use on-disk files without pushing.
-# See plans/0002-split-vagrantfile.md for the design rationale.
+# Scripts live in this repo under scripts/ and assets/. There are two ways the
+# guest gets them at provision time:
+#   • LOCAL — run the on-disk copy from the synced folder (/vagrant). This is
+#     what a normal `git clone … && vagrant up` uses: the guest runs EXACTLY the
+#     code that was cloned (including from a feature branch), with no network
+#     dependency and no risk of silently running a different ref.
+#   • REMOTE — fetch each script from raw.githubusercontent.com at $SCRIPTS_REF.
+#     This is the "download just the Vagrantfile" path (no scripts/ on disk).
+#
+# Selection (overridable):
+#   • VAGRANT_SCRIPTS_DIR set (incl. empty "") → honour it verbatim. Empty forces
+#     REMOTE even from a clone (handy to test what `main` would do).
+#   • Otherwise, auto-detect: if scripts/_lib.sh sits next to this Vagrantfile
+#     (i.e. this is a clone), default to LOCAL; else REMOTE.
+# The inline runner below still falls back to REMOTE per-script if the synced
+# folder didn't actually mount, so LOCAL is always safe to prefer.
+# See plans/0002-split-vagrantfile.md and plans/0011-local-scripts-by-default.md.
 SCRIPTS_REPO = "docksdocks/vagrant"
 SCRIPTS_REF  = ENV.fetch("VAGRANT_SCRIPTS_REF", "main")
-LOCAL_DIR    = ENV["VAGRANT_SCRIPTS_DIR"]
+_repo_scripts = File.join(File.dirname(File.expand_path(__FILE__)), "scripts")
+LOCAL_DIR = ENV.key?("VAGRANT_SCRIPTS_DIR") ? ENV["VAGRANT_SCRIPTS_DIR"] :
+            (File.file?(File.join(_repo_scripts, "_lib.sh")) ? "./scripts" : nil)
 
 SCRIPTS = %w[
   10-apt-repos
@@ -405,11 +432,16 @@ Vagrant.configure("2") do |config|
       # (dbus-launch, git clone, fetch_asset's curl temp dir, ...).
       chmod 1777 /tmp
 
-      if [ -n "${VAGRANT_SCRIPTS_DIR:-}" ]; then
-        # Local-dev mode: the repo is mounted at /vagrant.
+      if [ -n "${VAGRANT_SCRIPTS_DIR:-}" ] && [ -f /vagrant/scripts/#{name}.sh ]; then
+        # Local mode: run the on-disk copy from the synced folder (the cloned
+        # repo at /vagrant). Asset fetches inside the script read /vagrant/assets
+        # and fall back to curl per-file (see fetch_asset in _lib.sh), so a
+        # partially-mounted share still works.
         export VAGRANT_LIB_PATH=/vagrant/scripts/_lib.sh
         bash /vagrant/scripts/#{name}.sh
       else
+        # Remote mode: bare Vagrantfile, OR the synced folder didn't mount —
+        # fetch this script (and _lib.sh) from GitHub at the configured ref.
         # Debian minimal ships without curl; bootstrap it on first use.
         if ! command -v curl >/dev/null 2>&1; then
           export DEBIAN_FRONTEND=noninteractive

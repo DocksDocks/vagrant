@@ -6,6 +6,7 @@ export DEBIAN_FRONTEND=noninteractive
 : "${SCRIPTS_REPO:=docksdocks/vagrant}"
 : "${SCRIPTS_REF:=main}"
 
+# shellcheck source-path=SCRIPTDIR
 # shellcheck source=_lib.sh
 . "${VAGRANT_LIB_PATH:-/vagrant/scripts/_lib.sh}"
 

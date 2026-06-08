@@ -6,7 +6,7 @@ metadata:
   pattern: tool-wrapper
   source_files:
     - "scripts/85-secrets-env.sh"
-  updated: "2026-05-13"
+  updated: "2026-06-08"
 ---
 
 # Secrets-Env Convention
@@ -37,7 +37,7 @@ SECRETS_FILE="$USER_HOME/.config/secrets.env"
 BASHRC="$USER_HOME/.bashrc"
 
 if [[ ! -e "$SECRETS_FILE" ]]; then
-  install -d -m 0700 "$USER_HOME/.config"
+  install -d -o vagrant -g vagrant -m 0700 "$USER_HOME/.config"
   cat > "$SECRETS_FILE" <<'EOF'
 # secrets.env — sourced from ~/.bashrc (managed by 85-secrets-env.sh).
 #
@@ -49,11 +49,12 @@ if [[ ! -e "$SECRETS_FILE" ]]; then
 #
 # Keep this file out of any dotfile sync or backup that targets ~/.bashrc.
 EOF
+  chown vagrant:vagrant "$SECRETS_FILE"
   chmod 0600 "$SECRETS_FILE"
 fi
 ```
 
-Source: `scripts/85-secrets-env.sh:24-45`. `[[ ! -e "$SECRETS_FILE" ]]` uses `-e` (not `-f`) to catch symlinks and directories with the same name. `install -d -m 0700` creates `~/.config` with restrictive permissions.
+Source: `scripts/85-secrets-env.sh`. `[[ ! -e "$SECRETS_FILE" ]]` uses `-e` (not `-f`) to catch symlinks and directories with the same name. **`85-secrets-env.sh` runs AFTER `55-permissions.sh`**, so it must own the file to `vagrant` itself (`install -d -o vagrant` + `chown` the file) — the 55 chown sweep already ran and won't fix a root-created file. A root-owned 0600 `secrets.env` is unreadable by vagrant, so the `[ -r … ]` guard in `~/.bashrc` would silently skip it forever.
 
 ### Idempotent bashrc source line
 
@@ -89,7 +90,7 @@ fi
 
 ## Key Decisions
 
-- **Mode 0600 set at creation time**: ownership is corrected by `scripts/55-permissions.sh` (the chown sweep), but mode must be 0600 from the moment the file exists — regardless of when 55-permissions.sh runs. Source: `scripts/85-secrets-env.sh:29-30`.
+- **Owner vagrant + mode 0600 set at creation time**: because `85-secrets-env.sh` runs AFTER the `55-permissions.sh` chown sweep, it sets both owner (`chown vagrant:vagrant`) and mode (0600) itself, the moment the file exists. Relying on 55 here would leave a root-owned, vagrant-unreadable file. Source: `scripts/85-secrets-env.sh`.
 - **`[ -r FILE ] && . FILE` not `source FILE`**: `source` (bash builtin) is not POSIX; the dot-source with `-r` guard works in any POSIX shell and handles a missing file gracefully.
 - **`~/.config/` at 0700**: the directory itself is restricted so other users cannot enumerate its contents even if they cannot read individual files.
 - **Never sourced at system level**: `~/.config/secrets.env` is only sourced by `~/.bashrc` — not by `/etc/environment`, `/etc/profile`, or any system-level file. Secrets are vagrant-user-scoped only.
