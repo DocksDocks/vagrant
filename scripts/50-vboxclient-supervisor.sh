@@ -63,6 +63,16 @@ fetch_asset systemd/vbox-clipboard-healthcheck.service \
 fetch_asset systemd/vbox-clipboard-healthcheck.timer \
   /home/vagrant/.config/systemd/user/vbox-clipboard-healthcheck.timer
 
+# Real-time bridge watcher: tails the clipboard unit's journal (-n0, new lines
+# only) and restarts within ~1s of the degraded-bridge signature, instead of
+# waiting up to 2 min for the healthcheck timer above. The timer's read-probe
+# stays as the proactive (no-paste-needed) detector + stateless backstop.
+# See plans/0012.
+fetch_asset vbox-clipboard-bridge-watcher.sh /home/vagrant/.local/bin/vbox-clipboard-bridge-watcher
+chmod 0755 /home/vagrant/.local/bin/vbox-clipboard-bridge-watcher
+fetch_asset systemd/vbox-clipboard-bridge-watcher.service \
+  /home/vagrant/.config/systemd/user/vbox-clipboard-bridge-watcher.service
+
 # Enable the user units by creating the WantedBy symlinks directly
 # (avoids needing XDG_RUNTIME_DIR / an active user manager during provision)
 ln -sf ../vbox-clipboard.service \
@@ -71,6 +81,8 @@ ln -sf ../vbox-draganddrop.service \
   /home/vagrant/.config/systemd/user/default.target.wants/vbox-draganddrop.service
 ln -sf ../vbox-clipboard-unlock-watchdog.service \
   /home/vagrant/.config/systemd/user/default.target.wants/vbox-clipboard-unlock-watchdog.service
+ln -sf ../vbox-clipboard-bridge-watcher.service \
+  /home/vagrant/.config/systemd/user/default.target.wants/vbox-clipboard-bridge-watcher.service
 ln -sf ../vbox-clipboard-healthcheck.timer \
   /home/vagrant/.config/systemd/user/timers.target.wants/vbox-clipboard-healthcheck.timer
 

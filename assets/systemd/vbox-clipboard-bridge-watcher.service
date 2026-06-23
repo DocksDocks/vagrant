@@ -1,0 +1,14 @@
+[Unit]
+Description=VBoxClient clipboard bridge watcher (real-time journal monitor)
+PartOf=graphical-session.target
+After=graphical-session.target vbox-clipboard.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/vbox-clipboard-bridge-watcher
+Restart=always
+RestartSec=5s
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=default.target

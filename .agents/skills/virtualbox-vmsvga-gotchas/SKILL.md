@@ -1,6 +1,6 @@
 ---
 name: virtualbox-vmsvga-gotchas
-description: Use when diagnosing or modifying VirtualBox graphics, clipboard, drag-and-drop, auto-resize, or Chrome behaviour on the guest: setting --graphicscontroller vmsvga (NOT vboxsvga, Windows-only), holding the 256 MB --vram ceiling, keeping vblank_mode=off in assets/xfwm4.xml under VMSVGA's llvmpipe/SVGA3D/virgl renderer, refusing VirtualBox 3D acceleration (regresses xfwm4 compositing AND Chrome), supervising VBoxClient --clipboard / --draganddrop via systemd --user units (vbox-clipboard.service, vbox-draganddrop.service, vbox-clipboard-unlock-watchdog.service, Restart=always) plus the 2-min vbox-clipboard-healthcheck.timer that scans journal-since-ActiveEnter for the degraded-bridge signature (VBox formats 'NONE' source-side OR to 'INVALID' X11-side) to recover the silently-dead bridge for Oracle bug #5266 / #19234, the default.target.wants / timers.target.wants symlink trick because systemctl --user enable cannot run during provisioning, the xev/xrandr autoresize workaround (vbox-autoresize.desktop) for VirtualBox/virtualbox#568, and the chrome-policy-no-gpu.json HardwareAccelerationModeEnabled=false managed policy for VBox bug #15417. Not for XFCE theme/dconf config, shell-script conventions, or Vagrantfile host detection.
+description: Use when diagnosing or modifying VirtualBox guest graphics, clipboard, drag-and-drop, auto-resize, or Chrome: --graphicscontroller vmsvga (NOT vboxsvga/Windows-only), 256 MB --vram ceiling, vblank_mode=off in assets/xfwm4.xml, no VirtualBox 3D accel (regresses xfwm4 compositing AND Chrome); supervising VBoxClient --clipboard/--draganddrop via systemd --user units (Restart=always) with silently-dead HGCM<->X11 bridge recovery for Oracle #5266/#19234 — vbox-clipboard-unlock-watchdog.service, the 2-min vbox-clipboard-healthcheck.timer (journal-scan for VBox formats 'NONE'/to 'INVALID' + non-destructive xclip read-probe), and the real-time vbox-clipboard-bridge-watcher.service (journalctl -f -n0); the *.wants symlink trick (no systemctl --user enable at provision); the xev/xrandr autoresize workaround (vbox-autoresize.desktop, #568); chrome-policy-no-gpu.json HardwareAccelerationModeEnabled=false (VBox #15417). Not for XFCE theme/dconf config, shell-script conventions, or Vagrantfile host detection.
 user-invocable: false
 metadata:
   pattern: tool-wrapper
@@ -16,16 +16,19 @@ metadata:
     - "assets/systemd/vbox-clipboard-unlock-watchdog.service"
     - "assets/systemd/vbox-clipboard-healthcheck.service"
     - "assets/systemd/vbox-clipboard-healthcheck.timer"
+    - "assets/systemd/vbox-clipboard-bridge-watcher.service"
     - "assets/vbox-clipboard-unlock-watchdog.sh"
     - "assets/vbox-clipboard-healthcheck.sh"
+    - "assets/vbox-clipboard-bridge-watcher.sh"
     - "assets/vboxclient-session.desktop"
     - "assets/vbox-autoresize.desktop"
     - "assets/chrome-policy-no-gpu.json"
     - "plans/0001-clipboard-supervisor.md"
     - "plans/0003-vboxclient-xsession-divert.md"
     - "plans/0004-clipboard-healthcheck-timer.md"
+    - "plans/0012-clipboard-readprobe-realtime-watcher.md"
     - "CLAUDE.md"
-  updated: "2026-06-03"
+  updated: "2026-06-23"
 ---
 
 # VirtualBox VMSVGA Gotchas
